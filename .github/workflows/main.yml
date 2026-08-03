@@ -1,4 +1,4 @@
-name: Connessione macOS 14 Desktop VNC
+name: Connessione macOS 14 Desktop via Tailscale
 
 on:
   workflow_dispatch:
@@ -10,7 +10,6 @@ jobs:
     steps:
       - name: Imposta password utente del Runner (Forzato)
         run: |
-          # Sostituisci "MiaPassword123!" con la tua password personalizzata se preferisci
           sudo sysadminctl -deleteUserPassword runner
           sudo sysadminctl -resetPasswordFor runner -newPassword "MiaPassword123!"
 
@@ -19,20 +18,26 @@ jobs:
           sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart \
           -activate -configure -allowAccessFor -allUsers -privs -all
 
-      - name: Installa Ngrok e avvia il tunnel VNC
+      - name: Installa e Connetti Tailscale
         run: |
-          brew install ngrok
-          # Il tuo token Ngrok è stato inserito direttamente qui sotto
-          ngrok config add-authtoken "3EoMAQM9GPofB8ve0Ur2rgD5K8t_2tqfrr56vyM8QNhUNiELX"
+          # Installa Tailscale tramite Homebrew
+          brew install tailscale
           
-          # Avvia ngrok sulla porta VNC standard (5900) in background
-          ngrok tcp 5900 --log=stdout &
+          # Avvia il demone di background di Tailscale
+          sudo tailscaled > /dev/null 2>&1 &
           sleep 5
           
-          # Estrae e mostra l'indirizzo pubblico generato per il collegamento
-          curl --silent http://127.0.0 | jq -r '.tunnels.public_url'
+          # Effettua il login inserendo la tua chiave in chiaro nel codice
+          # SOSTITUISCI LA STRINGA SOTTO CON LA TUA CHIAVE REALE
+          sudo tailscale up --authkey "tskey-auth-kX2Bkdm5TP11CNTRL-GyHVCKsMSB66AbTqTWJiB64DWPVHdDDBN" --accept-dns=false
+          
+          # Mostra nei log l'IP privato assegnato a questa macchina virtuale
+          echo "============================================="
+          echo "IL TUO IP TAILSCALE PER IL COLLEGAMENTO È:"
+          tailscale ip -4
+          echo "============================================="
 
       - name: Mantieni il workflow attivo
         run: |
-          # Mantiene la macchina virtuale accesa per 6 ore (limite massimo di GitHub)
+          # Mantiene la macchina virtuale accesa per 6 ore
           sleep 21600
