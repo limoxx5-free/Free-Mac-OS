@@ -1,4 +1,4 @@
-name: Connessione macOS 14 Desktop via RDP (Windows App)
+name: Connessione macOS 14 Desktop via RustDesk / Remotely
 
 on:
   workflow_dispatch:
@@ -13,31 +13,31 @@ jobs:
           sudo sysadminctl -deleteUserPassword runner
           sudo sysadminctl -resetPasswordFor runner -newPassword "MiaPassword123!"
 
-      - name: Installa e Configura Server RDP (xrdp)
+      - name: Sblocca Firewall e Schermo macOS
         run: |
-          # Installiamo il server RDP xrdp tramite Homebrew
-          brew install xrdp
-          
-          # Configura e avvia il servizio in modalità amministratore
-          sudo brew services start xrdp
-          
-          # Disattiva il firewall di macOS per azzerare i blocchi di rete
+          # Elimina i blocchi di sicurezza video nativi di macOS 14
+          sudo defaults write /Library/Preferences/com.apple.RemoteManagement VNCAlwaysStartOnConsole -bool true
           sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off
 
-      - name: Installa e Connetti Tailscale
+      - name: Installa ed Esegui l'Agente Remoto
         run: |
-          brew install tailscale
-          sudo tailscaled > /dev/null 2>&1 &
-          sleep 5
+          # Scarica il client di controllo remoto compatibile con Apple Silicon (M1/M2)
+          brew install --cask rustdesk
           
-          # Connessione automatica alla tua rete privata con la tua chiave
-          sudo tailscale up --authkey "tskey-auth-kR9WV4QAFT11CNTRL-mXJYy5CqyrhdoSnTaPV1shHgikUSTtTf" --accept-dns=false
+          # Avvia il servizio in background e genera l'ID di connessione pubblico
+          sudo launchctl load -w /Library/LaunchDaemons/com.rustdesk.rustdesk.plist || true
+          sleep 10
           
+          # Forza la configurazione di una password fissa per l'accesso dall'iPad
+          rustdesk --password "MiaPassword123!"
+          
+          # Estrae e stampa l'ID unico sul log di GitHub per permetterti di connetterti
           echo "============================================="
-          echo "IL TUO IP TAILSCALE PER IL COLLEGAMENTO È:"
-          tailscale ip -4
+          echo "IL TUO ID UNICO PER IL COLLEGAMENTO È:"
+          rustdesk --get-id
           echo "============================================="
 
       - name: Mantieni il workflow attivo
         run: |
+          # Mantiene la macchina virtuale accesa per 6 ore
           sleep 21600
