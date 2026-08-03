@@ -8,10 +8,11 @@ jobs:
     runs-on: macos-14
     
     steps:
-      - name: Imposta password utente del Runner
+      - name: Imposta password utente del Runner (Forzato)
         run: |
-          # Sostituisci "MiaPassword123!" con una password a tua scelta
-          sudo dscl . -passwd /Users/runner "MiaPassword123!"
+          # Sostituisci "MiaPassword123!" con la tua password personalizzata se preferisci
+          sudo sysadminctl -deleteUserPassword runner
+          sudo sysadminctl -resetPasswordFor runner -newPassword "MiaPassword123!"
 
       - name: Attiva lo Screen Sharing nativo di macOS
         run: |
@@ -21,7 +22,7 @@ jobs:
       - name: Installa Ngrok e avvia il tunnel VNC
         run: |
           brew install ngrok
-          # INCOLLA IL TUO TOKEN NGROK REALE AL POSTO DI "IL_TUO_TOKEN_NGROK_QUI"
+          # Il tuo token Ngrok è stato inserito direttamente qui sotto
           ngrok config add-authtoken "3EoMAQM9GPofB8ve0Ur2rgD5K8t_2tqfrr56vyM8QNhUNiELX"
           
           # Avvia ngrok sulla porta VNC standard (5900) in background
@@ -29,7 +30,7 @@ jobs:
           sleep 5
           
           # Estrae e mostra l'indirizzo pubblico generato per il collegamento
-          curl --silent http://127.0.0 | jq -r '.tunnels[0].public_url'
+          curl --silent http://127.0.0 | jq -r '.tunnels.public_url'
 
       - name: Mantieni il workflow attivo
         run: |
