@@ -1,4 +1,4 @@
-name: Mac Cloud Definitivo (Senza Carta e Senza Scadenze)
+name: Mac Cloud Definitivo (Senza Carta e Senza Errori)
 
 on:
   workflow_dispatch:
@@ -31,15 +31,15 @@ jobs:
           sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart \
           -activate -configure -allowAccessFor -allUsers -privs -all -restart -agent
 
-      - name: Crea Tunnel Pubblico Gratuito
+      - name: Crea Tunnel Pubblico Gratuito (Serveo)
         run: |
-          # Usa il servizio gratuito localhost.run per creare un indirizzo pubblico senza registrarsi e senza carte
-          ssh -R 80:localhost:5900 nokey@localhost.run > tunnel.txt 2>&1 &
-          sleep 5
+          # Usiamo Serveo forzando l'accettazione delle chiavi host senza bloccarsi
+          ssh -o StrictHostKeyChecking=no -R 5900:localhost:5900 serveo.net > tunnel.txt 2>&1 &
+          sleep 8
           
           echo "============================================="
-          echo "COPIA IL SITO INTERNET CHE COMPARE QUI SOTTO:"
-          cat tunnel.txt | grep -o 'https://[^ ]*' || cat tunnel.txt
+          echo "COPIA L'INDIRIZZO CHE COMPARE QUI SOTTO:"
+          cat tunnel.txt
           echo "============================================="
 
       - name: Mantieni il workflow attivo
