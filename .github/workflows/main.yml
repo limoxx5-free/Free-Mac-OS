@@ -1,4 +1,4 @@
-name: Connessione macOS 14 Desktop via Tailscale
+name: Connessione macOS 14 Desktop via Tailscale (iPad OK)
 
 on:
   workflow_dispatch:
@@ -13,25 +13,28 @@ jobs:
           sudo sysadminctl -deleteUserPassword runner
           sudo sysadminctl -resetPasswordFor runner -newPassword "MiaPassword123!"
 
-      - name: Attiva lo Screen Sharing nativo di macOS
+      - name: Sblocca Firewall e attiva Screen Sharing
         run: |
+          # 1. Configura il server VNC classico per evitare la schermata nera
+          sudo defaults write /Library/Preferences/com.apple.RemoteManagement VNCAlwaysStartOnConsole -bool true
+          sudo defaults write /Library/Preferences/com.apple.RemoteManagement VNCAccessPassword -string "MiaPassword123!"
+          
+          # 2. Disattiva il firewall di macOS per azzerare i timeout su iOS/iPadOS
+          sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off
+          
+          # 3. Forza l'attivazione della gestione remota
           sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart \
-          -activate -configure -allowAccessFor -allUsers -privs -all
+          -activate -configure -allowAccessFor -allUsers -privs -all -restart -agent
 
       - name: Installa e Connetti Tailscale
         run: |
-          # Installa Tailscale tramite Homebrew
           brew install tailscale
-          
-          # Avvia il demone di background di Tailscale
           sudo tailscaled > /dev/null 2>&1 &
           sleep 5
           
-          # Effettua il login inserendo la tua chiave in chiaro nel codice
-          # SOSTITUISCI LA STRINGA SOTTO CON LA TUA CHIAVE REALE
-          sudo tailscale up --authkey "tskey-auth-kX2Bkdm5TP11CNTRL-GyHVCKsMSB66AbTqTWJiB64DWPVHdDDBN" --accept-dns=false
+          # Connessione sicura usando la tua chiave racchiusa correttamente tra virgolette
+          sudo tailscale up --authkey "tskey-auth-kR9WV4QAFT11CNTRL-mXJYy5CqyrhdoSnTaPV1shHgikUSTtTf" --accept-dns=false
           
-          # Mostra nei log l'IP privato assegnato a questa macchina virtuale
           echo "============================================="
           echo "IL TUO IP TAILSCALE PER IL COLLEGAMENTO È:"
           tailscale ip -4
@@ -39,5 +42,4 @@ jobs:
 
       - name: Mantieni il workflow attivo
         run: |
-          # Mantiene la macchina virtuale accesa per 6 ore
           sleep 21600
