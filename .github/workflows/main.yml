@@ -1,4 +1,4 @@
-name: Connessione macOS 14 Desktop via RustDesk / Remotely
+name: Connessione macOS 14 Desktop via RustDesk
 
 on:
   workflow_dispatch:
@@ -15,29 +15,30 @@ jobs:
 
       - name: Sblocca Firewall e Schermo macOS
         run: |
-          # Elimina i blocchi di sicurezza video nativi di macOS 14
           sudo defaults write /Library/Preferences/com.apple.RemoteManagement VNCAlwaysStartOnConsole -bool true
           sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off
 
-      - name: Installa ed Esegui l'Agente Remoto
+      - name: Installa ed Esegui RustDesk
         run: |
-          # Scarica il client di controllo remoto compatibile con Apple Silicon (M1/M2)
+          # 1. Installa l'applicazione RustDesk
           brew install --cask rustdesk
           
-          # Avvia il servizio in background e genera l'ID di connessione pubblico
-          sudo launchctl load -w /Library/LaunchDaemons/com.rustdesk.rustdesk.plist || true
-          sleep 10
+          # 2. Definiamo il percorso corretto dell'eseguibile di RustDesk su macOS
+          RUSTDESK_BIN="/Applications/RustDesk.app/Contents/MacOS/RustDesk"
           
-          # Forza la configurazione di una password fissa per l'accesso dall'iPad
-          rustdesk --password "MiaPassword123!"
+          # 3. Avvia il servizio core di RustDesk in background come amministratore
+          sudo "$RUSTDESK_BIN" --service > /dev/null 2>&1 &
+          sleep 5
           
-          # Estrae e stampa l'ID unico sul log di GitHub per permetterti di connetterti
+          # 4. Imposta la password fissa per l'iPad
+          "$RUSTDESK_BIN" --password "MiaPassword123!"
+          
+          # 5. Stampa l'ID unico nei log di GitHub per permetterti di connetterti
           echo "============================================="
           echo "IL TUO ID UNICO PER IL COLLEGAMENTO È:"
-          rustdesk --get-id
+          "$RUSTDESK_BIN" --get-id
           echo "============================================="
 
       - name: Mantieni il workflow attivo
         run: |
-          # Mantiene la macchina virtuale accesa per 6 ore
           sleep 21600
