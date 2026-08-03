@@ -13,28 +13,35 @@ jobs:
 
       - name: Installa e Configura RustDesk
         run: |
-          # Scarica e installa RustDesk tramite Homebrew
+          # Disabilita il controllo dei Tap di Brew per evitare avvisi
+          export HOMEBREW_NO_REQUIRE_TAP_TRUST=1
+          
+          # Installa RustDesk
           brew install --cask rustdesk
           
-          # Imposta una password fissa per la connessione grafica
-          # SOSTITUISCI 'LaTuaPasswordFissa123' CON LA TUA PASSWORD
-          sudo /Applications/RustDesk.app/Contents/MacOS/RustDesk --set-password LaTuaPasswordFissa123
+          echo "=== Avvio del Servizio RustDesk ==="
+          # Avvia il demone di sistema di RustDesk in background senza aprire l'interfaccia Flutter
+          sudo /Applications/RustDesk.app/Contents/MacOS/rustdesk --service &
           
-          # Avvia il servizio in background
-          sudo /Applications/RustDesk.app/Contents/MacOS/RustDesk --service &
-          
+          # Attendi 5 secondi che il servizio di rete sia online
           sleep 5
           
-          echo "===================================================="
-          echo "RUSTDESK INSTALLATO CON SUCCESSO!"
-          echo "Apri l'app RustDesk sul tuo PC e usa la tua password."
-          echo "Visualizzazione dell'ID RustDesk nei log qui sotto:"
-          echo "===================================================="
+          echo "=== Impostazione Password Fissa ==="
+          # Imposta la password usando la CLI interna del demone
+          sudo /Applications/RustDesk.app/Contents/Resources/rustdesk-utils --set-password LaTuaPasswordFissa123 || true
           
-          # Mostra l'ID univoco a schermo
-          /Applications/RustDesk.app/Contents/MacOS/RustDesk --get-id
+          # In alternativa, per le versioni più recenti di RustDesk:
+          sudo /Applications/RustDesk.app/Contents/MacOS/rustdesk --password LaTuaPasswordFissa123 || true
+          
+          sleep 3
+          
+          echo "===================================================="
+          echo "IL TUO ID RUSTDESK È:"
+          # Estrae e mostra solo l'ID univoco a 9 cifre
+          /Applications/RustDesk.app/Contents/Resources/rustdesk-utils --get-id || /Applications/RustDesk.app/Contents/MacOS/rustdesk --get-id
+          echo "===================================================="
 
       - name: Mantieni la macchina virtuale attiva
         run: |
-          # Mantiene la macchina viva per 6 ore
+          # Mantiene il job attivo per 6 ore
           sleep 21600
