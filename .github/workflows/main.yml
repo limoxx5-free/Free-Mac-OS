@@ -1,0 +1,37 @@
+name: Connessione macOS 14 Desktop VNC
+
+on:
+  workflow_dispatch:
+
+jobs:
+  macos-desktop:
+    runs-on: macos-14
+    
+    steps:
+      - name: Imposta password utente del Runner
+        run: |
+          # Sostituisci "MiaPassword123!" con una password a tua scelta
+          sudo dscl . -passwd /Users/runner "MiaPassword123!"
+
+      - name: Attiva lo Screen Sharing nativo di macOS
+        run: |
+          sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart \
+          -activate -configure -allowAccessFor -allUsers -privs -all
+
+      - name: Installa Ngrok e avvia il tunnel VNC
+        run: |
+          brew install ngrok
+          # INCOLLA IL TUO TOKEN NGROK REALE AL POSTO DI "IL_TUO_TOKEN_NGROK_QUI"
+          ngrok config add-authtoken "3EoMAQM9GPofB8ve0Ur2rgD5K8t_2tqfrr56vyM8QNhUNiELX"
+          
+          # Avvia ngrok sulla porta VNC standard (5900) in background
+          ngrok tcp 5900 --log=stdout &
+          sleep 5
+          
+          # Estrae e mostra l'indirizzo pubblico generato per il collegamento
+          curl --silent http://127.0.0 | jq -r '.tunnels[0].public_url'
+
+      - name: Mantieni il workflow attivo
+        run: |
+          # Mantiene la macchina virtuale accesa per 6 ore (limite massimo di GitHub)
+          sleep 21600
