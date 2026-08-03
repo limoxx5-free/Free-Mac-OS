@@ -1,4 +1,4 @@
-name: Mac Cloud Automatico (Senza Errori)
+name: Mac Cloud Automatico Diretto
 
 on:
   workflow_dispatch:
@@ -8,35 +8,28 @@ jobs:
     runs-on: macos-14
     
     steps:
-      - name: Reset Password e Sblocco Totale
+      - name: Crea Utente e Sblocca Schermo
         run: |
-          # 1. Imposta la password definitiva
-          sudo sysadminctl -deleteUserPassword runner
-          sudo sysadminctl -resetPasswordFor runner -newPassword "MiaPassword123!"
+          # 1. Crea un nuovo utente amministratore pulito chiamato "admin" con password "MiaPassword123!"
+          sudo dscl . -create /Users/admin
+          sudo dscl . -create /Users/admin UserShell /bin/bash
+          sudo dscl . -create /Users/admin RealName "Admin"
+          sudo dscl . -create /Users/admin UniqueID 502
+          sudo dscl . -create /Users/admin PrimaryGroupID 20
+          sudo dscl . -create /Users/admin NFSHomeDirectory /Users/admin
+          sudo dscl . -passwd /Users/admin "MiaPassword123!"
+          sudo dscl . -append /Groups/admin GroupMembership admin
+          sudo mkdir -p /Users/admin
+          sudo chown -R admin:staff /Users/admin
           
-          # 2. Rimuove il firewall e sblocca lo schermo video per evitare la rotellina su iPad
+          # 2. Rimuove il firewall e configura la console VNC legacy per evitare la rotellina su iPad
           sudo defaults write /Library/Preferences/com.apple.RemoteManagement VNCAlwaysStartOnConsole -bool true
           sudo defaults write /Library/Preferences/com.apple.RemoteManagement VNCAccessPassword -string "MiaPassword123!"
           sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off
           
-          # 3. Avvia lo schermo condiviso di Apple
+          # 3. Avvia lo schermo condiviso ufficiale di Apple
           sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart \
           -activate -configure -allowAccessFor -allUsers -privs -all -restart -agent
 
-      - name: Avvio della Rete
-        run: |
-          brew install tailscale
-          sudo tailscaled > /dev/null 2>&1 &
-          sleep 5
-          
-          # Usa la tua chiave valida
-          sudo tailscale up --authkey "tskey-auth-kBFQ4Y3bx811CNTRL-SF3cdBbzupgAoTupXk32qgmTUsoPQkv28" --accept-dns=false
-          
-          echo "============================================="
-          echo "IL TUO IP DA COPIARE:"
-          tailscale ip -4
-          echo "============================================="
-
-      - name: Mantieni il workflow attivo
-        run: |
-          sleep 21600
+      - name: Attiva Connessione Interattiva
+        uses: mxschmitt/action-tmate@v3
