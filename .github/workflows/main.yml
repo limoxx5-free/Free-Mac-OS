@@ -1,47 +1,40 @@
-name: Mac Cloud Definitivo (Senza Carta e Senza Errori)
+name: macOS Graphic Desktop (RustDesk)
 
 on:
   workflow_dispatch:
 
 jobs:
-  macos-desktop:
-    runs-on: macos-14
-    
+  remote-mac-gui:
+    runs-on: macos-latest
+
     steps:
-      - name: Crea Utente e Sblocca Schermo
-        run: |
-          # 1. Crea un utente amministratore pulito chiamato "admin"
-          sudo dscl . -create /Users/admin
-          sudo dscl . -create /Users/admin UserShell /bin/bash
-          sudo dscl . -create /Users/admin RealName "Admin"
-          sudo dscl . -create /Users/admin UniqueID 502
-          sudo dscl . -create /Users/admin PrimaryGroupID 20
-          sudo dscl . -create /Users/admin NFSHomeDirectory /Users/admin
-          sudo dscl . -passwd /Users/admin "MiaPassword123!"
-          sudo dscl . -append /Groups/admin GroupMembership admin
-          sudo mkdir -p /Users/admin
-          sudo chown -R admin:staff /Users/admin
-          
-          # 2. Configura il server VNC ufficiale di Apple
-          sudo defaults write /Library/Preferences/com.apple.RemoteManagement VNCAlwaysStartOnConsole -bool true
-          sudo defaults write /Library/Preferences/com.apple.RemoteManagement VNCAccessPassword -string "MiaPassword123!"
-          sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off
-          
-          # 3. Avvia lo schermo condiviso
-          sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart \
-          -activate -configure -allowAccessFor -allUsers -privs -all -restart -agent
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name: Crea Tunnel Pubblico Gratuito (Serveo)
+      - name: Installa e Configura RustDesk
         run: |
-          # Usiamo Serveo forzando l'accettazione delle chiavi host senza bloccarsi
-          ssh -o StrictHostKeyChecking=no -R 5900:localhost:5900 serveo.net > tunnel.txt 2>&1 &
-          sleep 8
+          # Scarica e installa RustDesk tramite Homebrew
+          brew install --cask rustdesk
           
-          echo "============================================="
-          echo "COPIA L'INDIRIZZO CHE COMPARE QUI SOTTO:"
-          cat tunnel.txt
-          echo "============================================="
+          # Imposta una password fissa per la connessione grafica
+          # SOSTITUISCI 'LaTuaPasswordFissa123' CON LA TUA PASSWORD
+          sudo /Applications/RustDesk.app/Contents/MacOS/RustDesk --set-password LaTuaPasswordFissa123
+          
+          # Avvia il servizio in background
+          sudo /Applications/RustDesk.app/Contents/MacOS/RustDesk --service &
+          
+          sleep 5
+          
+          echo "===================================================="
+          echo "RUSTDESK INSTALLATO CON SUCCESSO!"
+          echo "Apri l'app RustDesk sul tuo PC e usa la tua password."
+          echo "Visualizzazione dell'ID RustDesk nei log qui sotto:"
+          echo "===================================================="
+          
+          # Mostra l'ID univoco a schermo
+          /Applications/RustDesk.app/Contents/MacOS/RustDesk --get-id
 
-      - name: Mantieni il workflow attivo
+      - name: Mantieni la macchina virtuale attiva
         run: |
+          # Mantiene la macchina viva per 6 ore
           sleep 21600
