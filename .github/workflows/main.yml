@@ -1,4 +1,4 @@
-name: Connessione macOS 14 Desktop (Risolutivo iPad)
+name: Mac Cloud Automatico (Senza Errori)
 
 on:
   workflow_dispatch:
@@ -8,35 +8,32 @@ jobs:
     runs-on: macos-14
     
     steps:
-      - name: Imposta password utente del Runner (Forzato)
+      - name: Reset Password e Sblocco Totale
         run: |
+          # 1. Imposta la password definitiva
           sudo sysadminctl -deleteUserPassword runner
           sudo sysadminctl -resetPasswordFor runner -newPassword "MiaPassword123!"
-
-      - name: Configura e Forza Screen Sharing Nativo
-        run: |
-          # Configura lo schermo console VNC
+          
+          # 2. Rimuove il firewall e sblocca lo schermo video per evitare la rotellina su iPad
           sudo defaults write /Library/Preferences/com.apple.RemoteManagement VNCAlwaysStartOnConsole -bool true
           sudo defaults write /Library/Preferences/com.apple.RemoteManagement VNCAccessPassword -string "MiaPassword123!"
-          
-          # Disattiva il firewall di sistema
           sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off
           
-          # Avvia l'agente remoto ufficiale di Apple
+          # 3. Avvia lo schermo condiviso di Apple
           sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart \
           -activate -configure -allowAccessFor -allUsers -privs -all -restart -agent
 
-      - name: Connetti Rete Tailscale
+      - name: Avvio della Rete
         run: |
           brew install tailscale
           sudo tailscaled > /dev/null 2>&1 &
           sleep 5
           
-          # La tua nuova chiave Tailscale è inserita qui sotto
+          # Usa la tua chiave valida
           sudo tailscale up --authkey "tskey-auth-kBFQ4Y3bx811CNTRL-SF3cdBbzupgAoTupXk32qgmTUsoPQkv28" --accept-dns=false
           
           echo "============================================="
-          echo "IL TUO NUOVO IP DA INSERIRE IN VNC VIEWER:"
+          echo "IL TUO IP DA COPIARE:"
           tailscale ip -4
           echo "============================================="
 
