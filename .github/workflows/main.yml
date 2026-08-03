@@ -13,35 +13,24 @@ jobs:
 
       - name: Installa e Configura RustDesk
         run: |
-          # Disabilita il controllo dei Tap di Brew per evitare avvisi
           export HOMEBREW_NO_REQUIRE_TAP_TRUST=1
-          
-          # Installa RustDesk
           brew install --cask rustdesk
           
-          echo "=== Avvio del Servizio RustDesk ==="
-          # Avvia il demone di sistema di RustDesk in background senza aprire l'interfaccia Flutter
+          echo "=== Avvio del servizio RustDesk ==="
+          # Avvia il servizio di sistema
           sudo /Applications/RustDesk.app/Contents/MacOS/rustdesk --service &
-          
-          # Attendi 5 secondi che il servizio di rete sia online
           sleep 5
-          
+
           echo "=== Impostazione Password Fissa ==="
-          # Imposta la password usando la CLI interna del demone
-          sudo /Applications/RustDesk.app/Contents/Resources/rustdesk-utils --set-password LaTuaPasswordFissa123 || true
-          
-          # In alternativa, per le versioni più recenti di RustDesk:
-          sudo /Applications/RustDesk.app/Contents/MacOS/rustdesk --password LaTuaPasswordFissa123 || true
-          
-          sleep 3
-          
+          # Sintassi corretta per RustDesk 1.4+
+          sudo /Applications/RustDesk.app/Contents/MacOS/rustdesk --option password LaTuaPasswordFissa123
+          sleep 2
+
           echo "===================================================="
           echo "IL TUO ID RUSTDESK È:"
-          # Estrae e mostra solo l'ID univoco a 9 cifre
-          /Applications/RustDesk.app/Contents/Resources/rustdesk-utils --get-id || /Applications/RustDesk.app/Contents/MacOS/rustdesk --get-id
+          /Applications/RustDesk.app/Contents/MacOS/rustdesk --get-id
           echo "===================================================="
 
-      - name: Mantieni la macchina virtuale attiva
+      - name: Mantieni la macchina attiva
         run: |
-          # Mantiene il job attivo per 6 ore
           sleep 21600
