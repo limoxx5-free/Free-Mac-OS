@@ -15,14 +15,14 @@ jobs:
 
       - name: Configura e Forza Screen Sharing Nativo
         run: |
-          # Forza l'attivazione dello schermo console VNC senza vincoli di interfaccia
+          # Configura lo schermo console VNC
           sudo defaults write /Library/Preferences/com.apple.RemoteManagement VNCAlwaysStartOnConsole -bool true
           sudo defaults write /Library/Preferences/com.apple.RemoteManagement VNCAccessPassword -string "MiaPassword123!"
           
-          # Disattiva completamente il firewall di sistema
+          # Disattiva il firewall di sistema
           sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off
           
-          # Avvia l'agente remoto di Apple
+          # Avvia l'agente remoto ufficiale di Apple
           sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart \
           -activate -configure -allowAccessFor -allUsers -privs -all -restart -agent
 
@@ -32,8 +32,8 @@ jobs:
           sudo tailscaled > /dev/null 2>&1 &
           sleep 5
           
-          # Connessione con la tua chiave
-          sudo tailscale up --authkey "tskey-auth-kR9WV4QAFT11CNTRL-mXJYy5CqyrhdoSnTaPV1shHgikUSTtTf" --accept-dns=false --advertise-routes=100.64.0.0/10
+          # La tua nuova chiave Tailscale è inserita qui sotto
+          sudo tailscale up --authkey "tskey-auth-kBFQ4Y3bx811CNTRL-SF3cdBbzupgAoTupXk32qgmTUsoPQkv28" --accept-dns=false
           
           echo "============================================="
           echo "IL TUO NUOVO IP DA INSERIRE IN VNC VIEWER:"
