@@ -1,4 +1,4 @@
-name: Mac Cloud Automatico Diretto
+name: Mac Cloud Definitivo (Senza Carta e Senza Scadenze)
 
 on:
   workflow_dispatch:
@@ -10,7 +10,7 @@ jobs:
     steps:
       - name: Crea Utente e Sblocca Schermo
         run: |
-          # 1. Crea un nuovo utente amministratore pulito chiamato "admin" con password "MiaPassword123!"
+          # 1. Crea un utente amministratore pulito chiamato "admin"
           sudo dscl . -create /Users/admin
           sudo dscl . -create /Users/admin UserShell /bin/bash
           sudo dscl . -create /Users/admin RealName "Admin"
@@ -22,14 +22,26 @@ jobs:
           sudo mkdir -p /Users/admin
           sudo chown -R admin:staff /Users/admin
           
-          # 2. Rimuove il firewall e configura la console VNC legacy per evitare la rotellina su iPad
+          # 2. Configura il server VNC ufficiale di Apple
           sudo defaults write /Library/Preferences/com.apple.RemoteManagement VNCAlwaysStartOnConsole -bool true
           sudo defaults write /Library/Preferences/com.apple.RemoteManagement VNCAccessPassword -string "MiaPassword123!"
           sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off
           
-          # 3. Avvia lo schermo condiviso ufficiale di Apple
+          # 3. Avvia lo schermo condiviso
           sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart \
           -activate -configure -allowAccessFor -allUsers -privs -all -restart -agent
 
-      - name: Attiva Connessione Interattiva
-        uses: mxschmitt/action-tmate@v3
+      - name: Crea Tunnel Pubblico Gratuito
+        run: |
+          # Usa il servizio gratuito localhost.run per creare un indirizzo pubblico senza registrarsi e senza carte
+          ssh -R 80:localhost:5900 nokey@localhost.run > tunnel.txt 2>&1 &
+          sleep 5
+          
+          echo "============================================="
+          echo "COPIA IL SITO INTERNET CHE COMPARE QUI SOTTO:"
+          cat tunnel.txt | grep -o 'https://[^ ]*' || cat tunnel.txt
+          echo "============================================="
+
+      - name: Mantieni il workflow attivo
+        run: |
+          sleep 21600
