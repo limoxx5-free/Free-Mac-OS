@@ -1,4 +1,4 @@
-name: Connessione macOS 14 Desktop via RustDesk
+name: Connessione macOS 14 Desktop (Risolutivo iPad)
 
 on:
   workflow_dispatch:
@@ -13,30 +13,31 @@ jobs:
           sudo sysadminctl -deleteUserPassword runner
           sudo sysadminctl -resetPasswordFor runner -newPassword "MiaPassword123!"
 
-      - name: Sblocca Firewall e Schermo macOS
+      - name: Configura e Forza Screen Sharing Nativo
         run: |
+          # Forza l'attivazione dello schermo console VNC senza vincoli di interfaccia
           sudo defaults write /Library/Preferences/com.apple.RemoteManagement VNCAlwaysStartOnConsole -bool true
+          sudo defaults write /Library/Preferences/com.apple.RemoteManagement VNCAccessPassword -string "MiaPassword123!"
+          
+          # Disattiva completamente il firewall di sistema
           sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off
+          
+          # Avvia l'agente remoto di Apple
+          sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart \
+          -activate -configure -allowAccessFor -allUsers -privs -all -restart -agent
 
-      - name: Installa ed Esegui RustDesk
+      - name: Connetti Rete Tailscale
         run: |
-          # 1. Installa l'applicazione RustDesk
-          brew install --cask rustdesk
-          
-          # 2. Definiamo il percorso corretto dell'eseguibile di RustDesk su macOS
-          RUSTDESK_BIN="/Applications/RustDesk.app/Contents/MacOS/RustDesk"
-          
-          # 3. Avvia il servizio core di RustDesk in background come amministratore
-          sudo "$RUSTDESK_BIN" --service > /dev/null 2>&1 &
+          brew install tailscale
+          sudo tailscaled > /dev/null 2>&1 &
           sleep 5
           
-          # 4. Imposta la password fissa per l'iPad
-          "$RUSTDESK_BIN" --password "MiaPassword123!"
+          # Connessione con la tua chiave
+          sudo tailscale up --authkey "tskey-auth-kR9WV4QAFT11CNTRL-mXJYy5CqyrhdoSnTaPV1shHgikUSTtTf" --accept-dns=false --advertise-routes=100.64.0.0/10
           
-          # 5. Stampa l'ID unico nei log di GitHub per permetterti di connetterti
           echo "============================================="
-          echo "IL TUO ID UNICO PER IL COLLEGAMENTO È:"
-          "$RUSTDESK_BIN" --get-id
+          echo "IL TUO NUOVO IP DA INSERIRE IN VNC VIEWER:"
+          tailscale ip -4
           echo "============================================="
 
       - name: Mantieni il workflow attivo
