@@ -1,4 +1,4 @@
-name: Connessione macOS 14 Desktop via Tailscale (iPad OK)
+name: Connessione macOS 14 Desktop via RDP (Windows App)
 
 on:
   workflow_dispatch:
@@ -13,18 +13,16 @@ jobs:
           sudo sysadminctl -deleteUserPassword runner
           sudo sysadminctl -resetPasswordFor runner -newPassword "MiaPassword123!"
 
-      - name: Sblocca Firewall e attiva Screen Sharing
+      - name: Installa e Configura Server RDP (xrdp)
         run: |
-          # 1. Configura il server VNC classico per evitare la schermata nera
-          sudo defaults write /Library/Preferences/com.apple.RemoteManagement VNCAlwaysStartOnConsole -bool true
-          sudo defaults write /Library/Preferences/com.apple.RemoteManagement VNCAccessPassword -string "MiaPassword123!"
+          # Installiamo il server RDP xrdp tramite Homebrew
+          brew install xrdp
           
-          # 2. Disattiva il firewall di macOS per azzerare i timeout su iOS/iPadOS
+          # Configura e avvia il servizio in modalità amministratore
+          sudo brew services start xrdp
+          
+          # Disattiva il firewall di macOS per azzerare i blocchi di rete
           sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off
-          
-          # 3. Forza l'attivazione della gestione remota
-          sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart \
-          -activate -configure -allowAccessFor -allUsers -privs -all -restart -agent
 
       - name: Installa e Connetti Tailscale
         run: |
@@ -32,7 +30,7 @@ jobs:
           sudo tailscaled > /dev/null 2>&1 &
           sleep 5
           
-          # Connessione sicura usando la tua chiave racchiusa correttamente tra virgolette
+          # Connessione automatica alla tua rete privata con la tua chiave
           sudo tailscale up --authkey "tskey-auth-kR9WV4QAFT11CNTRL-mXJYy5CqyrhdoSnTaPV1shHgikUSTtTf" --accept-dns=false
           
           echo "============================================="
