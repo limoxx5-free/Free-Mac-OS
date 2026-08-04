@@ -1,7 +1,7 @@
-name: Desktop Remoto ChromeOS (Senza Ngrok)
+name: Desktop Remoto ChromeOS
 
 on:
-  workflow_dispatch:
+  workflow_dispatch: # Ti permette di avviarlo manualmente dalla scheda Actions
 
 jobs:
   chromeos:
@@ -9,14 +9,14 @@ jobs:
     steps:
     - name: Ottimizzazione Spazio e Abilitazione KVM
       run: |
-        # Libera lo spazio necessario sul runner per l'immagine ChromeOS
+        # Libera lo spazio necessario sul runner eliminando tool pesanti inutilizzati
         sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc
-        # Configura i permessi per l'accelerazione hardware della VM
+        # Configura i permessi per l'accelerazione hardware della macchina virtuale
         sudo chmod 666 /dev/kvm
 
     - name: Avvio Container ChromeOS Flex
       run: |
-        # Avvia l'emulatore ChromeOS Flex. Ascolta sulla porta web 8006
+        # Scarica e avvia l'emulatore ChromeOS Flex (porta web interna: 8006)
         docker run -d --name chromeos \
           --device /dev/kvm \
           --cap-add NET_ADMIN \
@@ -27,13 +27,18 @@ jobs:
 
     - name: Installazione e Avvio Cloudflare Tunnel
       run: |
-        # Scarica il binario ufficiale di Cloudflare senza bisogno di configurare account
-        wget https://github.com
-        sudo dpkg -i cloudflared-linux-amd64.deb
+        # Aggiunge il repository ufficiale stabile di Cloudflare e installa il pacchetto
+        sudo mkdir -p /usr/share/keyrings
+        curl -L https://cloudflare.com | sudo tee /usr/share/keyrings/cloudflare-main.gpg >/dev/null
+        echo "deb [signed-by=/usr/share/keyrings/cloudflare-main.gpg] https://cloudflare.com stable main" | sudo tee /etc/apt/sources.list.d/cloudflared.list
+        sudo apt-get update && sudo apt-get install -y cloudflared
         
-        echo "In attesa che l'istanza di ChromeOS completi l'avvio..."
-        sleep 30
+        echo "In attesa che l'istanza di ChromeOS completi l'inizializzazione..."
+        sleep 40
         
-        echo "=== COPIA IL LINK .trycloudflare.com CHE APPARIRÀ QUI SOTTO ==="
-        # Crea un tunnel pubblico temporaneo gratuito verso la porta di ChromeOS
+        echo "=========================================================="
+        echo "COPIA IL LINK .trycloudflare.com CHE APPARIRÀ QUI SOTTO:"
+        echo "=========================================================="
+        
+        # Crea un tunnel pubblico temporaneo e gratuito verso la porta di ChromeOS
         cloudflared tunnel --url http://localhost:8006
