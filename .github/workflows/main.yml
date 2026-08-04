@@ -27,11 +27,10 @@ jobs:
 
     - name: Installazione e Avvio Cloudflare Tunnel
       run: |
-        # Aggiunge il repository ufficiale stabile di Cloudflare e installa il pacchetto
-        sudo mkdir -p /usr/share/keyrings
-        curl -L https://cloudflare.com | sudo tee /usr/share/keyrings/cloudflare-main.gpg >/dev/null
-        echo "deb [signed-by=/usr/share/keyrings/cloudflare-main.gpg] https://cloudflare.com stable main" | sudo tee /etc/apt/sources.list.d/cloudflared.list
-        sudo apt-get update && sudo apt-get install -y cloudflared
+        # Scarica direttamente il binario standalone ufficiale di Cloudflare bypassando i repository APT
+        curl -L --output cloudflared https://github.com
+        chmod +x cloudflared
+        sudo mv cloudflared /usr/local/bin/
         
         echo "In attesa che l'istanza di ChromeOS completi l'inizializzazione..."
         sleep 40
