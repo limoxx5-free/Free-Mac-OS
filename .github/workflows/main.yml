@@ -1,36 +1,39 @@
-name: macOS Graphic Desktop (RustDesk)
+name: Desktop Remoto ChromeOS (Senza Ngrok)
 
 on:
   workflow_dispatch:
 
 jobs:
-  remote-mac-gui:
-    runs-on: macos-latest
-
+  chromeos:
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+    - name: Ottimizzazione Spazio e Abilitazione KVM
+      run: |
+        # Libera lo spazio necessario sul runner per l'immagine ChromeOS
+        sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc
+        # Configura i permessi per l'accelerazione hardware della VM
+        sudo chmod 666 /dev/kvm
 
-      - name: Installa e Configura RustDesk
-        run: |
-          export HOMEBREW_NO_REQUIRE_TAP_TRUST=1
-          brew install --cask rustdesk
-          
-          echo "=== Avvio del servizio RustDesk ==="
-          # Avvia il servizio di sistema
-          sudo /Applications/RustDesk.app/Contents/MacOS/rustdesk --service &
-          sleep 5
+    - name: Avvio Container ChromeOS Flex
+      run: |
+        # Avvia l'emulatore ChromeOS Flex. Ascolta sulla porta web 8006
+        docker run -d --name chromeos \
+          --device /dev/kvm \
+          --cap-add NET_ADMIN \
+          -p 8006:8006 \
+          -e RAM_SIZE="4G" \
+          -e CORES="2" \
+          dockurr/chromeos:latest
 
-          echo "=== Impostazione Password Fissa ==="
-          # Sintassi corretta per RustDesk 1.4+
-          sudo /Applications/RustDesk.app/Contents/MacOS/rustdesk --option password LaTuaPasswordFissa123
-          sleep 2
-
-          echo "===================================================="
-          echo "IL TUO ID RUSTDESK È:"
-          /Applications/RustDesk.app/Contents/MacOS/rustdesk --get-id
-          echo "===================================================="
-
-      - name: Mantieni la macchina attiva
-        run: |
-          sleep 21600
+    - name: Installazione e Avvio Cloudflare Tunnel
+      run: |
+        # Scarica il binario ufficiale di Cloudflare senza bisogno di configurare account
+        wget https://github.com
+        sudo dpkg -i cloudflared-linux-amd64.deb
+        
+        echo "In attesa che l'istanza di ChromeOS completi l'avvio..."
+        sleep 30
+        
+        echo "=== COPIA IL LINK .trycloudflare.com CHE APPARIRÀ QUI SOTTO ==="
+        # Crea un tunnel pubblico temporaneo gratuito verso la porta di ChromeOS
+        cloudflared tunnel --url http://localhost:8006
