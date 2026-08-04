@@ -1,7 +1,7 @@
 name: Desktop Remoto ChromeOS
 
 on:
-  workflow_dispatch: # Ti permette di avviarlo manualmente dalla scheda Actions
+  workflow_dispatch:
 
 jobs:
   chromeos:
@@ -9,14 +9,11 @@ jobs:
     steps:
     - name: Ottimizzazione Spazio e Abilitazione KVM
       run: |
-        # Libera lo spazio necessario sul runner eliminando tool pesanti inutilizzati
         sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc
-        # Configura i permessi per l'accelerazione hardware della macchina virtuale
         sudo chmod 666 /dev/kvm
 
     - name: Avvio Container ChromeOS Flex
       run: |
-        # Scarica e avvia l'emulatore ChromeOS Flex (porta web interna: 8006)
         docker run -d --name chromeos \
           --device /dev/kvm \
           --cap-add NET_ADMIN \
@@ -27,10 +24,9 @@ jobs:
 
     - name: Installazione e Avvio Cloudflare Tunnel
       run: |
-        # Scarica direttamente il binario standalone ufficiale di Cloudflare bypassando i repository APT
-        curl -L --output cloudflared https://github.com
-        chmod +x cloudflared
-        sudo mv cloudflared /usr/local/bin/
+        # Scarica il pacchetto ufficiale Debian stabile direttamente dai server di Cloudflare
+        wget -q https://equinox.io
+        sudo dpkg -i cloudflared-stable-linux-amd64.deb
         
         echo "In attesa che l'istanza di ChromeOS completi l'inizializzazione..."
         sleep 40
@@ -39,5 +35,5 @@ jobs:
         echo "COPIA IL LINK .trycloudflare.com CHE APPARIRÀ QUI SOTTO:"
         echo "=========================================================="
         
-        # Crea un tunnel pubblico temporaneo e gratuito verso la porta di ChromeOS
+        # Avvia il tunnel verso l'emulatore ChromeOS
         cloudflared tunnel --url http://localhost:8006
