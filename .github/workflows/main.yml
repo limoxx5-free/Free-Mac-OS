@@ -1,43 +1,48 @@
-name: Mac Grafico Istantaneo (Zero Configurazione)
+name: macOS Remote Desktop (AnyDesk Fix)
 
-on:
+on: 
   workflow_dispatch:
 
 jobs:
-  connessione:
+  anydesk-setup:
     runs-on: macos-latest
     steps:
-      - name: Attivare Schermo Nativo del Mac
+      - name: Installare AnyDesk
         run: |
-          echo "=== Configurazione Condivisione Schermo Apple ==="
-          # Comando kickstart corretto con i parametri esatti per macOS
-          sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart \
-            -activate -configure -allowAccessFor -allUsers -privs -all \
-            -clientopts -setvnclegacy yes -setvncpw PasswordSicura123
-          
-          sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart -restart -agent
-          echo "=== Schermo Attivo ==="
+          echo "=== Installazione tramite Brew ==="
+          brew install --cask anydesk
 
-      - name: Avviare Tunnel Grafico con Pinggy
+      - name: Inizializzare Servizio di Sistema
         run: |
-          echo "=== Avvio del Tunnel Pubblico ==="
-          # Crea un tunnel TCP sulla porta VNC (5900) senza bisogno di registrarsi o usare token
-          ssh -p 443 -R0:localhost:5900 -o StrictHostKeyChecking=no -o ServerAliveInterval=30 tcp.pinggy.io > pinggy.log &
+          echo "=== Registrazione del servizio permanente ==="
+          # Diamo i permessi di esecuzione corretti all'applicazione
+          sudo chmod +x /Applications/AnyDesk.app/Contents/MacOS/AnyDesk
           
-          echo "=== Attesa generazione indirizzo (10 secondi) ==="
-          sleep 10
+          echo "=== Avvio del servizio in background ==="
+          # Avviamo il servizio AnyDesk come root per generare i file necessari
+          sudo /Applications/AnyDesk.app/Contents/MacOS/AnyDesk --service &
           
-          echo "--------------------------------------------------------"
-          echo " DATI PER CONNETTERTI AL DESKTOP DEL MAC:"
-          # Estrae l'indirizzo pubblico generato dai log di Pinggy
-          grep -oE "tcp://[^ ]+" pinggy.log || cat pinggy.log
-          echo " Password VNC: PasswordSicura123"
-          echo "--------------------------------------------------------"
-          echo "Nota: Copia l'indirizzo tcp (es. rorvj...a.pinggy.link:XXXXX) e incollalo nel tuo client VNC."
+          echo "=== Attesa avvio servizio (20 secondi) ==="
+          sleep 20
 
-      - name: Mantieni in esecuzione per 6 ore
+      - name: Configurare Password ed Estrarre ID
         run: |
+          echo "=== Impostazione della password ==="
+          # Ora che il servizio ha avuto 20 secondi per svegliarsi, passiamo la password
+          echo "PasswordSicura123" | sudo /Applications/AnyDesk.app/Contents/MacOS/AnyDesk --set-password
+          
+          echo "=== Recupero ID di Connessione ==="
+          ANYDESK_ID=$(/Applications/AnyDesk.app/Contents/MacOS/AnyDesk --get-id)
+          echo "--------------------------------------------------------"
+          echo "Il tuo ID AnyDesk per la connessione è: $ANYDESK_ID"
+          echo "Password impostata: PasswordSicura123"
+          echo "--------------------------------------------------------"
+
+      - name: Mantieni in esecuzione il Runner per 6 ore
+        run: |
+          echo "Il runner rimarrà attivo per 6 ore."
           for i in {1..72}; do
-            echo "Connessione attiva. Minuti passati: $(( (i-1) * 5 ))"
+            echo "Stato del runner: ATTIVO. Minuti trascorsi: $(( (i-1) * 5 ))"
             sleep 300
           done
+
