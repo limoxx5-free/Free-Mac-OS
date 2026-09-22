@@ -1,48 +1,44 @@
-name: macOS Remote Desktop (AnyDesk Fix)
+name: Mac Grafico Automatico
 
-on: 
+on:
   workflow_dispatch:
 
 jobs:
-  anydesk-setup:
+  connessione:
     runs-on: macos-latest
     steps:
-      - name: Installare AnyDesk
+      - name: Attivare Schermo Nativo del Mac
         run: |
-          echo "=== Installazione tramite Brew ==="
-          brew install --cask anydesk
+          echo "=== Configurazione Condivisione Schermo Apple ==="
+          # Attiviamo lo schermo grafico nativo con i comandi separati richiesti dal Mac
+          sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart -activate
+          sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart -configure -allowAccessFor -allUsers -privs -all
+          sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart -configure -clientopts -setvnclegacy yes -setvncpw PasswordSicura123
+          sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart -restart -agent
+          echo "=== Schermo Attivo ==="
 
-      - name: Inizializzare Servizio di Sistema
+      - name: Avviare Tunnel Automatico
         run: |
-          echo "=== Registrazione del servizio permanente ==="
-          # Diamo i permessi di esecuzione corretti all'applicazione
-          sudo chmod +x /Applications/AnyDesk.app/Contents/MacOS/AnyDesk
+          echo "=== Installazione del Tunnel ==="
+          # Installiamo localtunnel globalmente usando npm (già pronto sul Mac)
+          sudo npm install -g localtunnel
           
-          echo "=== Avvio del servizio in background ==="
-          # Avviamo il servizio AnyDesk come root per generare i file necessari
-          sudo /Applications/AnyDesk.app/Contents/MacOS/AnyDesk --service &
+          echo "=== Apertura del Tunnel sulla porta 5900 ==="
+          # Avviamo il tunnel in background sulla porta VNC (5900)
+          lt --port 5900 > localtunnel.log &
           
-          echo "=== Attesa avvio servizio (20 secondi) ==="
-          sleep 20
-
-      - name: Configurare Password ed Estrarre ID
-        run: |
-          echo "=== Impostazione della password ==="
-          # Ora che il servizio ha avuto 20 secondi per svegliarsi, passiamo la password
-          echo "PasswordSicura123" | sudo /Applications/AnyDesk.app/Contents/MacOS/AnyDesk --set-password
+          echo "=== Attesa generazione indirizzo (10 secondi) ==="
+          sleep 10
           
-          echo "=== Recupero ID di Connessione ==="
-          ANYDESK_ID=$(/Applications/AnyDesk.app/Contents/MacOS/AnyDesk --get-id)
           echo "--------------------------------------------------------"
-          echo "Il tuo ID AnyDesk per la connessione è: $ANYDESK_ID"
-          echo "Password impostata: PasswordSicura123"
+          echo " DATI PER CONNETTERTI AL DESKTOP DEL MAC:"
+          cat localtunnel.log
+          echo " Password VNC: PasswordSicura123"
           echo "--------------------------------------------------------"
 
-      - name: Mantieni in esecuzione il Runner per 6 ore
+      - name: Mantieni in esecuzione per 6 ore
         run: |
-          echo "Il runner rimarrà attivo per 6 ore."
           for i in {1..72}; do
-            echo "Stato del runner: ATTIVO. Minuti trascorsi: $(( (i-1) * 5 ))"
+            echo "Connessione mantenuta. Minuti passati: $(( (i-1) * 5 ))"
             sleep 300
           done
-
