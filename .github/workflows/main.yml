@@ -1,1 +1,51 @@
+name: macOS Remote Desktop with AnyDesk
+
+on: 
+  workflow_dispatch: # Ti permette di avviare il workflow manualmente da GitHub
+
+jobs:
+  anydesk-setup:
+    runs-on: macos-latest
+    steps:
+      - name: Scaricare e Installare AnyDesk
+        run: |
+          echo "=== Scaricamento di AnyDesk ==="
+          curl -L -o AnyDesk.dmg https://anydesk.com
+          
+          echo "=== Montaggio dell'immagine DMG ==="
+          sudo hdiutil attach AnyDesk.dmg
+          
+          echo "=== Copia dell'applicazione in Applications ==="
+          sudo cp -R /Volumes/AnyDesk/AnyDesk.app /Applications/
+          
+          echo "=== Smontaggio del DMG ==="
+          sudo hdiutil detach /Volumes/AnyDesk
+          
+      - name: Configurare la Password di Accesso Non Presidiato
+        run: |
+          echo "=== Impostazione della password ==="
+          # Sostituisci 'LaTuaPasswordSicura123' con la password che userai per connetterti
+          echo "LaTuaPasswordSicura123" | sudo /Applications/AnyDesk.app/Contents/MacOS/AnyDesk --set-password
+          
+      - name: Avviare il Servizio AnyDesk e Mostrare l'ID
+        run: |
+          echo "=== Avvio di AnyDesk in background ==="
+          /Applications/AnyDesk.app/Contents/MacOS/AnyDesk --service &
+          
+          echo "=== Recupero dell'AnyDesk ID ==="
+          sleep 5 # Attende che il servizio si registri sui server AnyDesk
+          ANYDESK_ID=$(/Applications/AnyDesk.app/Contents/MacOS/AnyDesk --get-id)
+          echo "--------------------------------------------------------"
+          echo "Il tuo ID AnyDesk per la connessione è: $ANYDESK_ID"
+          echo "--------------------------------------------------------"
+
+      - name: Mantieni in esecuzione il Runner per 6 ore
+        run: |
+          echo "Il runner rimarrà attivo per 6 ore (21600 secondi)."
+          # Ciclo di 6 ore che stampa un aggiornamento ogni 10 minuti per evitare il timeout dei log di GitHub
+          for i in {1..36}; do
+            echo "Il server è attivo da $(( (i-1) * 10 )) minuti. Prossimo controllo tra 10 minuti..."
+            sleep 600
+          done
+          echo "Tempo scaduto. Il workflow si sta per chiudere."
 
