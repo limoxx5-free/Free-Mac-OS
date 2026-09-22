@@ -7,41 +7,38 @@ jobs:
   anydesk-setup:
     runs-on: macos-latest
     steps:
-      - name: Installare AnyDesk tramite Homebrew
+      - name: Installare AnyDesk
         run: |
-          echo "=== Installazione di AnyDesk via Brew ==="
+          echo "=== Installazione rapida tramite Brew ==="
           brew install --cask anydesk
-          
-      - name: Avviare il Servizio AnyDesk
-        run: |
-          echo "=== Avvio del servizio AnyDesk in background ==="
-          # Avviamo il servizio con sudo per inizializzare il demone di sistema
-          sudo /Applications/AnyDesk.app/Contents/MacOS/AnyDesk --service &
-          
-          echo "=== Attesa inizializzazione del servizio (15 secondi) ==="
-          sleep 15 
-          
-      - name: Configurare la Password di Accesso Non Presidiato
+
+      - name: Configurare e Forzare l'Avvio di AnyDesk
         run: |
           echo "=== Impostazione della password ==="
-          # Ora che il servizio è attivo, la connessione non fallirà più
-          # Sostituisci 'LaTuaPasswordSicura123' con la password che userai per connetterti
+          # Imposta la password di sicurezza (sostituisci se vuoi)
           echo "LaTuaPasswordSicura123" | sudo /Applications/AnyDesk.app/Contents/MacOS/AnyDesk --set-password
           
-      - name: Recuperare e Mostrare l'ID di Connessione
-        run: |
-          echo "=== Recupero dell'AnyDesk ID ==="
+          echo "=== Registrazione del servizio grafico di sistema ==="
+          # Questo comando forza macOS a registrare AnyDesk come servizio di login persistente
+          sudo /Applications/AnyDesk.app/Contents/MacOS/AnyDesk --register-service
+          
+          echo "=== Avvio forzato del servizio ==="
+          sudo /Applications/AnyDesk.app/Contents/MacOS/AnyDesk --service &
+          
+          echo "=== Attesa registrazione sui server ==="
+          sleep 15
+          
+          echo "=== RECUPERO ID CONNESSIONE ==="
           ANYDESK_ID=$(/Applications/AnyDesk.app/Contents/MacOS/AnyDesk --get-id)
           echo "--------------------------------------------------------"
           echo "Il tuo ID AnyDesk per la connessione è: $ANYDESK_ID"
+          echo "Password: LaTuaPasswordSicura123"
           echo "--------------------------------------------------------"
 
       - name: Mantieni in esecuzione il Runner per 6 ore
         run: |
-          echo "Il runner rimarrà attivo per 6 ore (21600 secondi)."
-          # Stampa lo stato ogni 5 minuti per evitare il timeout di inattività dei log di GitHub
+          echo "Il runner rimarrà attivo per 6 ore."
           for i in {1..72}; do
             echo "Stato del runner: ATTIVO. Minuti trascorsi: $(( (i-1) * 5 ))"
             sleep 300
           done
-          echo "Tempo massimo raggiunto. Chiusura del workflow."
