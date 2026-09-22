@@ -1,4 +1,4 @@
-name: Mac Grafico Automatico
+name: Mac Grafico Fisso (No Bad Gateway)
 
 on:
   workflow_dispatch:
@@ -7,31 +7,39 @@ jobs:
   connessione:
     runs-on: macos-latest
     steps:
-      - name: Attivare Schermo Nativo del Mac
+      - name: Installare Server Grafico e Tunnel
         run: |
-          echo "=== Configurazione Condivisione Schermo Apple ==="
-          # Attiviamo lo schermo grafico nativo con i comandi separati richiesti dal Mac
-          sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart -activate
-          sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart -configure -allowAccessFor -allUsers -privs -all
-          sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart -configure -clientopts -setvnclegacy yes -setvncpw PasswordSicura123
-          sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart -restart -agent
-          echo "=== Schermo Attivo ==="
-
-      - name: Avviare Tunnel Automatico
-        run: |
-          echo "=== Installazione del Tunnel ==="
-          # Installiamo localtunnel globalmente usando npm (già pronto sul Mac)
+          echo "=== Installazione strumenti di rete e grafica ==="
+          # Installiamo TigerVNC (il server desktop) e localtunnel
+          brew install tigervnc
           sudo npm install -g localtunnel
+
+      - name: Avviare il Server Grafico (Porta 5900)
+        run: |
+          echo "=== Configurazione della Password VNC ==="
+          # Imposta la password di sicurezza nel sistema di TigerVNC
+          mkdir -p ~/.vnc
+          echo "PasswordSicura123" | vncpasswd -f > ~/.vnc/passwd
+          chmod 600 ~/.vnc/passwd
           
-          echo "=== Apertura del Tunnel sulla porta 5900 ==="
-          # Avviamo il tunnel in background sulla porta VNC (5900)
+          echo "=== Avvio del Desktop Virtuale ==="
+          # Avviamo il server sulla porta nativa 5900 (:0) con una risoluzione standard
+          vncserver :0 -geometry 1280x720 -localhost no -rfbauth ~/.vnc/passwd &
+          
+          echo "=== Attesa avvio del server grafica (10 secondi) ==="
+          sleep 10
+
+      - name: Avviare il Tunnel Automatico
+        run: |
+          echo "=== Apertura del Tunnel su internet ==="
+          # Colleghiamo il tunnel direttamente al nostro server TigerVNC funzionante
           lt --port 5900 > localtunnel.log &
           
-          echo "=== Attesa generazione indirizzo (10 secondi) ==="
+          echo "=== Attesa generazione link (10 secondi) ==="
           sleep 10
           
           echo "--------------------------------------------------------"
-          echo " DATI PER CONNETTERTI AL DESKTOP DEL MAC:"
+          echo " CLICCA SUL LINK WEB O INCOLLALO NEL CLIENT VNC:"
           cat localtunnel.log
           echo " Password VNC: PasswordSicura123"
           echo "--------------------------------------------------------"
