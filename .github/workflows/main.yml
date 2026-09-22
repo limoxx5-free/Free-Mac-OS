@@ -1,48 +1,19 @@
-name: macOS Remote Desktop with AnyDesk
+name: Accesso Mac Remoto Istantaneo
 
-on: 
+on:
   workflow_dispatch:
 
 jobs:
-  anydesk-setup:
+  remote-access:
     runs-on: macos-latest
     steps:
-      - name: Installare AnyDesk
-        run: |
-          echo "=== Installazione tramite Brew ==="
-          brew install --cask anydesk
+      - name: Avvio della sessione remota istantanea
+        uses: mxschmitt/action-tmate@v3
+        with:
+          # Questo evita che il workflow si blocchi se un comando fallisce
+          limit-access-to-actor: false
 
-      - name: Forzare il Sottosistema Grafico di macOS e Avviare AnyDesk
-        run: |
-          echo "=== Collegamento del binario ==="
-          # Crea un link simbolico per rendere AnyDesk accessibile globalmente
-          sudo ln -sf /Applications/AnyDesk.app/Contents/MacOS/AnyDesk /usr/local/bin/anydesk
-          
-          echo "=== Simulazione Sessione Utente Grafica ==="
-          # Forza macOS ad attivare la sessione grafica di login
-          sudo launchctl load -w /System/Library/LaunchDaemons/com.apple.loginwindow.plist 2>/dev/null || true
-          
-          echo "=== Avvio del servizio in modalità demone ==="
-          # Avvia il servizio AnyDesk e genera i file di configurazione locali
-          sudo anydesk --service &
-          
-          echo "=== Attesa generazione socket di sistema (20 secondi) ==="
-          sleep 20
-
-      - name: Configurare Password ed Estrarre ID
-        run: |
-          echo "=== Impostazione della password ==="
-          # Con il servizio attivo nel sottosistema grafico, la password viene accettata
-          echo "LaTuaPasswordSicura123" | sudo anydesk --set-password
-          
-          echo "=== Recupero ID di Connessione ==="
-          ANYDESK_ID=$(anydesk --get-id)
-          echo "--------------------------------------------------------"
-          echo "Il tuo ID AnyDesk per la connessione è: $ANYDESK_ID"
-          echo "Password impostata: LaTuaPasswordSicura123"
-          echo "--------------------------------------------------------"
-
-      - name: Mantieni in esecuzione il Runner per 6 ore
+      - name: Mantieni in esecuzione per 6 ore
         run: |
           echo "Il runner rimarrà attivo per 6 ore."
           for i in {1..72}; do
