@@ -1,4 +1,4 @@
-name: Mac Grafico Istantaneo
+name: Mac Grafico Istantaneo (Zero Configurazione)
 
 on:
   workflow_dispatch:
@@ -10,33 +10,34 @@ jobs:
       - name: Attivare Schermo Nativo del Mac
         run: |
           echo "=== Configurazione Condivisione Schermo Apple ==="
+          # Comando kickstart corretto con i parametri esatti per macOS
           sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart \
             -activate -configure -allowAccessFor -allUsers -privs -all \
-            -clientopts -setvncpasswd -vncpasswd PasswordSicura123
+            -clientopts -setvnclegacy yes -setvncpw PasswordSicura123
           
           sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart -restart -agent
+          echo "=== Schermo Attivo ==="
 
-      - name: Avviare Tunnel senza Account
+      - name: Avviare Tunnel Grafico con Pinggy
         run: |
-          echo "=== Installazione Strumenti ==="
-          brew install ngrok jq
+          echo "=== Avvio del Tunnel Pubblico ==="
+          # Crea un tunnel TCP sulla porta VNC (5900) senza bisogno di registrarsi o usare token
+          ssh -p 443 -R0:localhost:5900 -o StrictHostKeyChecking=no -o ServerAliveInterval=30 tcp.pinggy.io > pinggy.log &
           
-          echo "=== Avvio Tunnel Grafico ==="
-          # Avvia ngrok senza configurare account, usando i server pubblici pronti
-          ngrok tcp 5900 --log=stdout > ngrok.log &
+          echo "=== Attesa generazione indirizzo (10 secondi) ==="
           sleep 10
           
           echo "--------------------------------------------------------"
           echo " DATI PER CONNETTERTI AL DESKTOP DEL MAC:"
-          NGROK_URL=$(curl -s http://127.0.0 | jq -r '.tunnels[0].public_url')
-          echo " Indirizzo: $NGROK_URL"
+          # Estrae l'indirizzo pubblico generato dai log di Pinggy
+          grep -oE "tcp://[^ ]+" pinggy.log || cat pinggy.log
           echo " Password VNC: PasswordSicura123"
           echo "--------------------------------------------------------"
-          echo "Se usi un client VNC (es. RealVNC), rimuovi 'tcp://' dall'indirizzo."
+          echo "Nota: Copia l'indirizzo tcp (es. rorvj...a.pinggy.link:XXXXX) e incollalo nel tuo client VNC."
 
       - name: Mantieni in esecuzione per 6 ore
         run: |
           for i in {1..72}; do
-            echo "Connessione mantenuta. Minuti passati: $(( (i-1) * 5 ))"
+            echo "Connessione attiva. Minuti passati: $(( (i-1) * 5 ))"
             sleep 300
           done
