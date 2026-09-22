@@ -10,22 +10,27 @@ jobs:
       - name: Installare AnyDesk tramite Homebrew
         run: |
           echo "=== Installazione di AnyDesk via Brew ==="
-          # Usiamo brew cask per scaricare e installare l'applicazione aggirando il blocco HTTP 403
           brew install --cask anydesk
+          
+      - name: Avviare il Servizio AnyDesk
+        run: |
+          echo "=== Avvio del servizio AnyDesk in background ==="
+          # Avviamo il servizio con sudo per inizializzare il demone di sistema
+          sudo /Applications/AnyDesk.app/Contents/MacOS/AnyDesk --service &
+          
+          echo "=== Attesa inizializzazione del servizio (15 secondi) ==="
+          sleep 15 
           
       - name: Configurare la Password di Accesso Non Presidiato
         run: |
           echo "=== Impostazione della password ==="
+          # Ora che il servizio è attivo, la connessione non fallirà più
           # Sostituisci 'LaTuaPasswordSicura123' con la password che userai per connetterti
           echo "LaTuaPasswordSicura123" | sudo /Applications/AnyDesk.app/Contents/MacOS/AnyDesk --set-password
           
-      - name: Avviare il Servizio AnyDesk e Mostrare l'ID
+      - name: Recuperare e Mostrare l'ID di Connessione
         run: |
-          echo "=== Avvio di AnyDesk in background ==="
-          sudo /Applications/AnyDesk.app/Contents/MacOS/AnyDesk --service &
-          
           echo "=== Recupero dell'AnyDesk ID ==="
-          sleep 15 # Attende la corretta registrazione sui server AnyDesk
           ANYDESK_ID=$(/Applications/AnyDesk.app/Contents/MacOS/AnyDesk --get-id)
           echo "--------------------------------------------------------"
           echo "Il tuo ID AnyDesk per la connessione è: $ANYDESK_ID"
