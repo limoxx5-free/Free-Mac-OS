@@ -1,4 +1,4 @@
-name: Mac Grafico Fisso (No Bad Gateway)
+name: Mac Grafico Automatico via Browser
 
 on:
   workflow_dispatch:
@@ -7,41 +7,32 @@ jobs:
   connessione:
     runs-on: macos-latest
     steps:
-      - name: Installare Server Grafico e Tunnel
+      - name: Installare il Server Grafico Web
         run: |
-          echo "=== Installazione strumenti di rete e grafica ==="
-          # Installiamo TigerVNC (il server desktop) e localtunnel
-          brew install tigervnc
-          sudo npm install -g localtunnel
+          echo "=== Installazione strumenti grafici nativi ==="
+          # Installiamo un server VNC e NoVNC tramite Node.js per evitare comandi mancanti
+          npm install -g vnc-server novnc localtunnel
 
-      - name: Avviare il Server Grafico (Porta 5900)
+      - name: Avviare il Desktop e il Tunnel Web
         run: |
-          echo "=== Configurazione della Password VNC ==="
-          # Imposta la password di sicurezza nel sistema di TigerVNC
-          mkdir -p ~/.vnc
-          echo "PasswordSicura123" | vncpasswd -f > ~/.vnc/passwd
-          chmod 600 ~/.vnc/passwd
+          echo "=== Avvio del Server Grafico Virtuale ==="
+          # Avvia il server grafico sulla porta standard
+          vnc-server --port 5900 &
+          sleep 5
           
-          echo "=== Avvio del Desktop Virtuale ==="
-          # Avviamo il server sulla porta nativa 5900 (:0) con una risoluzione standard
-          vncserver :0 -geometry 1280x720 -localhost no -rfbauth ~/.vnc/passwd &
+          echo "=== Attivazione dell'interfaccia Web (NoVNC) ==="
+          # Converte il segnale video in una pagina web sulla porta 8080
+          novnc --vnc localhost:5900 --listen 8080 &
+          sleep 5
           
-          echo "=== Attesa avvio del server grafica (10 secondi) ==="
-          sleep 10
-
-      - name: Avviare il Tunnel Automatico
-        run: |
-          echo "=== Apertura del Tunnel su internet ==="
-          # Colleghiamo il tunnel direttamente al nostro server TigerVNC funzionante
-          lt --port 5900 > localtunnel.log &
-          
-          echo "=== Attesa generazione link (10 secondi) ==="
+          echo "=== Apertura del Tunnel internet automatico ==="
+          # Crea il link pubblico sulla porta web 8080
+          lt --port 8080 > localtunnel.log &
           sleep 10
           
           echo "--------------------------------------------------------"
-          echo " CLICCA SUL LINK WEB O INCOLLALO NEL CLIENT VNC:"
+          echo " CLICCA SUL LINK QUI SOTTO PER APRIRE IL MAC NEL BROWSER:"
           cat localtunnel.log
-          echo " Password VNC: PasswordSicura123"
           echo "--------------------------------------------------------"
 
       - name: Mantieni in esecuzione per 6 ore
