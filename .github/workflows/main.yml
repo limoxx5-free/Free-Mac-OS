@@ -1,7 +1,7 @@
 name: macOS Remote Desktop with AnyDesk
 
 on: 
-  workflow_dispatch: # Ti permette di avviare il workflow manualmente da GitHub
+  workflow_dispatch:
 
 jobs:
   anydesk-setup:
@@ -10,10 +10,14 @@ jobs:
       - name: Scaricare e Installare AnyDesk
         run: |
           echo "=== Scaricamento di AnyDesk ==="
-          curl -L -o AnyDesk.dmg https://anydesk.com
+          # L'opzione -fsSL segue correttamente i reindirizzamenti dei server AnyDesk
+          curl -fsSL -o AnyDesk.dmg https://anydesk.com
+          
+          echo "=== Controllo peso file scaricato ==="
+          ls -lh AnyDesk.dmg
           
           echo "=== Montaggio dell'immagine DMG ==="
-          sudo hdiutil attach AnyDesk.dmg
+          sudo hdiutil attach -nobrowse AnyDesk.dmg
           
           echo "=== Copia dell'applicazione in Applications ==="
           sudo cp -R /Volumes/AnyDesk/AnyDesk.app /Applications/
@@ -30,10 +34,10 @@ jobs:
       - name: Avviare il Servizio AnyDesk e Mostrare l'ID
         run: |
           echo "=== Avvio di AnyDesk in background ==="
-          /Applications/AnyDesk.app/Contents/MacOS/AnyDesk --service &
+          sudo /Applications/AnyDesk.app/Contents/MacOS/AnyDesk --service &
           
           echo "=== Recupero dell'AnyDesk ID ==="
-          sleep 5 # Attende che il servizio si registri sui server AnyDesk
+          sleep 10 # Attende la registrazione sui server AnyDesk
           ANYDESK_ID=$(/Applications/AnyDesk.app/Contents/MacOS/AnyDesk --get-id)
           echo "--------------------------------------------------------"
           echo "Il tuo ID AnyDesk per la connessione è: $ANYDESK_ID"
@@ -42,10 +46,9 @@ jobs:
       - name: Mantieni in esecuzione il Runner per 6 ore
         run: |
           echo "Il runner rimarrà attivo per 6 ore (21600 secondi)."
-          # Ciclo di 6 ore che stampa un aggiornamento ogni 10 minuti per evitare il timeout dei log di GitHub
-          for i in {1..36}; do
-            echo "Il server è attivo da $(( (i-1) * 10 )) minuti. Prossimo controllo tra 10 minuti..."
-            sleep 600
+          # Ciclo ottimizzato: stampa lo stato ogni 5 minuti per impedire il timeout di inattività dei log di GitHub
+          for i in {1..72}; do
+            echo "Stato del server: ATTIVO. Passati $(( (i-1) * 5 )) minuti. Prossimo check tra 5 minuti..."
+            sleep 300
           done
-          echo "Tempo scaduto. Il workflow si sta per chiudere."
-
+          echo "Tempo massimo raggiunto. Chiusura del workflow."
