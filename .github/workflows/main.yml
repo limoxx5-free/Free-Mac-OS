@@ -1,22 +1,31 @@
-name: Accesso Mac Remoto Istantaneo
+name: Mac Remoto Istantaneo (Zero Configurazione)
 
 on:
   workflow_dispatch:
 
 jobs:
-  remote-access:
+  connessione-rapida:
     runs-on: macos-latest
     steps:
-      - name: Avvio della sessione remota istantanea
-        uses: mxschmitt/action-tmate@v3
-        with:
-          # Questo evita che il workflow si blocchi se un comando fallisce
-          limit-access-to-actor: false
-
-      - name: Mantieni in esecuzione per 6 ore
+      - name: Avvia il Terminale Remoto nel Browser
         run: |
-          echo "Il runner rimarrà attivo per 6 ore."
+          echo "=== Installazione dello strumento di connessione ==="
+          brew install tmate
+          
+          echo "=== Avvio della sessione in background ==="
+          tmate -F &
+          
+          echo "=== Attesa generazione del link web (10 secondi) ==="
+          sleep 10
+          
+          echo "--------------------------------------------------------"
+          echo " CLICCA SUL LINK WEB QUI SOTTO PER ENTRARE NEL MAC:"
+          tmate display -p '#{tmate_web}'
+          echo "--------------------------------------------------------"
+
+      - name: Mantieni in esecuzione il Runner per 6 ore
+        run: |
           for i in {1..72}; do
-            echo "Stato del runner: ATTIVO. Minuti trascorsi: $(( (i-1) * 5 ))"
+            echo "Mac attivo. Minuti passati: $(( (i-1) * 5 ))"
             sleep 300
           done
