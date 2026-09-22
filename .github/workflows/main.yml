@@ -1,31 +1,42 @@
-name: Mac Remoto Istantaneo (Zero Configurazione)
+name: Mac Grafico Istantaneo
 
 on:
   workflow_dispatch:
 
 jobs:
-  connessione-rapida:
+  connessione:
     runs-on: macos-latest
     steps:
-      - name: Avvia il Terminale Remoto nel Browser
+      - name: Attivare Schermo Nativo del Mac
         run: |
-          echo "=== Installazione dello strumento di connessione ==="
-          brew install tmate
+          echo "=== Configurazione Condivisione Schermo Apple ==="
+          sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart \
+            -activate -configure -allowAccessFor -allUsers -privs -all \
+            -clientopts -setvncpasswd -vncpasswd PasswordSicura123
           
-          echo "=== Avvio della sessione in background ==="
-          tmate -F &
+          sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart -restart -agent
+
+      - name: Avviare Tunnel senza Account
+        run: |
+          echo "=== Installazione Strumenti ==="
+          brew install ngrok jq
           
-          echo "=== Attesa generazione del link web (10 secondi) ==="
+          echo "=== Avvio Tunnel Grafico ==="
+          # Avvia ngrok senza configurare account, usando i server pubblici pronti
+          ngrok tcp 5900 --log=stdout > ngrok.log &
           sleep 10
           
           echo "--------------------------------------------------------"
-          echo " CLICCA SUL LINK WEB QUI SOTTO PER ENTRARE NEL MAC:"
-          tmate display -p '#{tmate_web}'
+          echo " DATI PER CONNETTERTI AL DESKTOP DEL MAC:"
+          NGROK_URL=$(curl -s http://127.0.0 | jq -r '.tunnels[0].public_url')
+          echo " Indirizzo: $NGROK_URL"
+          echo " Password VNC: PasswordSicura123"
           echo "--------------------------------------------------------"
+          echo "Se usi un client VNC (es. RealVNC), rimuovi 'tcp://' dall'indirizzo."
 
-      - name: Mantieni in esecuzione il Runner per 6 ore
+      - name: Mantieni in esecuzione per 6 ore
         run: |
           for i in {1..72}; do
-            echo "Mac attivo. Minuti passati: $(( (i-1) * 5 ))"
+            echo "Connessione mantenuta. Minuti passati: $(( (i-1) * 5 ))"
             sleep 300
           done
