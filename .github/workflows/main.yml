@@ -7,23 +7,11 @@ jobs:
   anydesk-setup:
     runs-on: macos-latest
     steps:
-      - name: Scaricare e Installare AnyDesk
+      - name: Installare AnyDesk tramite Homebrew
         run: |
-          echo "=== Scaricamento di AnyDesk ==="
-          # L'opzione -fsSL segue correttamente i reindirizzamenti dei server AnyDesk
-          curl -fsSL -o AnyDesk.dmg https://anydesk.com
-          
-          echo "=== Controllo peso file scaricato ==="
-          ls -lh AnyDesk.dmg
-          
-          echo "=== Montaggio dell'immagine DMG ==="
-          sudo hdiutil attach -nobrowse AnyDesk.dmg
-          
-          echo "=== Copia dell'applicazione in Applications ==="
-          sudo cp -R /Volumes/AnyDesk/AnyDesk.app /Applications/
-          
-          echo "=== Smontaggio del DMG ==="
-          sudo hdiutil detach /Volumes/AnyDesk
+          echo "=== Installazione di AnyDesk via Brew ==="
+          # Usiamo brew cask per scaricare e installare l'applicazione aggirando il blocco HTTP 403
+          brew install --cask anydesk
           
       - name: Configurare la Password di Accesso Non Presidiato
         run: |
@@ -37,7 +25,7 @@ jobs:
           sudo /Applications/AnyDesk.app/Contents/MacOS/AnyDesk --service &
           
           echo "=== Recupero dell'AnyDesk ID ==="
-          sleep 10 # Attende la registrazione sui server AnyDesk
+          sleep 15 # Attende la corretta registrazione sui server AnyDesk
           ANYDESK_ID=$(/Applications/AnyDesk.app/Contents/MacOS/AnyDesk --get-id)
           echo "--------------------------------------------------------"
           echo "Il tuo ID AnyDesk per la connessione è: $ANYDESK_ID"
@@ -46,9 +34,9 @@ jobs:
       - name: Mantieni in esecuzione il Runner per 6 ore
         run: |
           echo "Il runner rimarrà attivo per 6 ore (21600 secondi)."
-          # Ciclo ottimizzato: stampa lo stato ogni 5 minuti per impedire il timeout di inattività dei log di GitHub
+          # Stampa lo stato ogni 5 minuti per evitare il timeout di inattività dei log di GitHub
           for i in {1..72}; do
-            echo "Stato del server: ATTIVO. Passati $(( (i-1) * 5 )) minuti. Prossimo check tra 5 minuti..."
+            echo "Stato del runner: ATTIVO. Minuti trascorsi: $(( (i-1) * 5 ))"
             sleep 300
           done
           echo "Tempo massimo raggiunto. Chiusura del workflow."
