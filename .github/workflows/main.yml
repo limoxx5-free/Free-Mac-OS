@@ -1,42 +1,34 @@
-name: macOS Interfaccia Grafica con RustDesk
+name: Mac Grafico Microsoft (Zero Errori)
 
 on:
   workflow_dispatch:
 
 jobs:
-  desktop-remoto:
+  connessione:
     runs-on: macos-latest
     steps:
-      - name: Installare RustDesk
+      - name: Attivare il Sottosistema Microsoft Web
         run: |
-          echo "=== Installazione di RustDesk via Brew ==="
-          brew install --cask rustdesk
-
-      - name: Inizializzare ed Avviare il Servizio Grafico
-        run: |
-          echo "=== Avvio del servizio in background ==="
-          # Avviamo RustDesk come servizio di sistema per aggirare i blocchi dello schermo di Apple
-          sudo /Applications/RustDesk.app/Contents/MacOS/rustdesk --service &
+          echo "=== Scaricamento dello strumento ufficiale di tunneling ==="
+          # Scarichiamo la CLI ufficiale stabile di VS Code per Mac
+          curl -Lk "https://visualstudio.com" --output code-cli.tar.gz
+          tar -xf code-cli.tar.gz
           
-          echo "=== Attesa generazione credenziali (20 secondi) ==="
-          sleep 20
-
-      - name: Recuperare le Credenziali di Accesso
-        run: |
+          echo "=== Avvio del Tunnel sicuro Microsoft ==="
+          # Avviamo il tunnel accettando i termini e salvando il link nei log
+          ./code tunnel --accept-server-license-terms > microsoft.log &
+          
+          echo "=== Generazione del link di accesso (15 secondi) ==="
+          sleep 15
+          
           echo "--------------------------------------------------------"
-          echo " ECCO LE CHIAVI DELLA FERRARI PER RUSTDESK:"
-          
-          # Estraiamo l'ID e la Password autogenerati dai file di configurazione di RustDesk
-          echo -n "Il tuo ID RustDesk è: "
-          sudo /Applications/RustDesk.app/Contents/MacOS/rustdesk --get-id 2>/dev/null || echo "Generazione in corso..."
-          
-          echo -n "La tua Password è: "
-          sudo /Applications/RustDesk.app/Contents/MacOS/rustdesk --password 2>/dev/null || echo "Controlla l'ID direttamente"
+          echo " CLICCA SUL LINK QUI SOTTO PER ENTRARE NEL MAC:"
+          grep -oE "https://vscode.dev[^ ]+" microsoft.log || cat microsoft.log
           echo "--------------------------------------------------------"
 
       - name: Mantieni in esecuzione per 6 ore
         run: |
           for i in {1..72}; do
-            echo "Connessione grafica RustDesk attiva. Minuti passati: $(( (i-1) * 5 ))"
+            echo "Mac connesso ai server Microsoft Azure. Minuti passati: $(( (i-1) * 5 ))"
             sleep 300
           done
