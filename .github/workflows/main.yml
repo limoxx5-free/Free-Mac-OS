@@ -1,4 +1,4 @@
-name: macOS Interfaccia Grafica Reale
+name: macOS Interfaccia Grafica con RustDesk
 
 on:
   workflow_dispatch:
@@ -7,35 +7,36 @@ jobs:
   desktop-remoto:
     runs-on: macos-latest
     steps:
-      - name: Attivare Schermo Nativo del Mac
+      - name: Installare RustDesk
         run: |
-          echo "=== Configurazione Condivisione Schermo Apple ==="
-          # Attiviamo il server VNC nativo di Apple usando comandi singoli digeriti dal sistema
-          sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart -activate
-          sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart -configure -allowAccessFor -allUsers -privs -all
-          sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart -configure -clientopts -setvnclegacy yes -setvncpw PasswordSicura123
-          sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart -restart -agent
-          echo "=== Schermo Apple Attivato ==="
+          echo "=== Installazione di RustDesk via Brew ==="
+          brew install --cask rustdesk
 
-      - name: Generare Indirizzo di Connessione Reale
+      - name: Inizializzare ed Avviare il Servizio Grafico
         run: |
-          echo "=== Creazione Tunnel di Rete Diretto ==="
-          # Creiamo il tunnel usando il comando SSH nativo del Mac sulla porta grafica 5900
-          ssh -R 80:localhost:5900 nokey@localhost.run > tunnel.log &
+          echo "=== Avvio del servizio in background ==="
+          # Avviamo RustDesk come servizio di sistema per aggirare i blocchi dello schermo di Apple
+          sudo /Applications/RustDesk.app/Contents/MacOS/rustdesk --service &
           
-          echo "=== Attesa generazione indirizzo (15 secondi) ==="
-          sleep 15
-          
+          echo "=== Attesa generazione credenziali (20 secondi) ==="
+          sleep 20
+
+      - name: Recuperare le Credenziali di Accesso
+        run: |
           echo "--------------------------------------------------------"
-          echo " ECCO LE TUE CHIAVI DELLA FERRARI. CONNETTITI QUI:"
-          # Estrae l'indirizzo reale generato dal tunnel di rete
-          grep -oE "[a-zA-Z0-9.-]+\.lh\.lrun\.ch" tunnel.log || cat tunnel.log
-          echo " Password dello Schermo: PasswordSicura123"
+          echo " ECCO LE CHIAVI DELLA FERRARI PER RUSTDESK:"
+          
+          # Estraiamo l'ID e la Password autogenerati dai file di configurazione di RustDesk
+          echo -n "Il tuo ID RustDesk è: "
+          sudo /Applications/RustDesk.app/Contents/MacOS/rustdesk --get-id 2>/dev/null || echo "Generazione in corso..."
+          
+          echo -n "La tua Password è: "
+          sudo /Applications/RustDesk.app/Contents/MacOS/rustdesk --password 2>/dev/null || echo "Controlla l'ID direttamente"
           echo "--------------------------------------------------------"
 
       - name: Mantieni in esecuzione per 6 ore
         run: |
           for i in {1..72}; do
-            echo "Connessione grafica stabile. Minuti passati: $(( (i-1) * 5 ))"
+            echo "Connessione grafica RustDesk attiva. Minuti passati: $(( (i-1) * 5 ))"
             sleep 300
           done
