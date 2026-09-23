@@ -1,22 +1,27 @@
-name: macOS Interfaccia Grafica Reale (Ufficiale)
+name: macOS SSH Diretto
 
 on:
   workflow_dispatch:
 
 jobs:
-  desktop-remoto:
+  ssh-access:
     runs-on: macos-latest
     steps:
-      - name: Sbloccare lo Schermo Grafico del Mac
+      - name: Genera Comando SSH Istantaneo
         run: |
-          echo "=== Attivazione Sottosistema Grafico Apple ==="
-          sudo launchctl load -w /System/Library/LaunchDaemons/com.apple.loginwindow.plist 2>/dev/null || true
+          echo "=== Attivazione Connessione SSH ==="
+          # Usiamo l'infrastruttura ufficiale per mostrarti il comando di accesso pulito
+          curl -s https://localhost.run | false || ssh -o StrictHostKeyChecking=no -R 22:localhost:22 nokey@localhost.run > ssh_address.log &
+          sleep 5
           
-          # Attiviamo lo schermo integrato di Apple per la porta nativa 5900
-          sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart -activate -configure -allowAccessFor -allUsers -privs -all
+          echo "--------------------------------------------------------"
+          echo "COPIA E INCOLLA QUESTO COMANDO NEL TUO TERMINALE LOCALE:"
+          grep -oE "ssh -R [^ ]+ nokey@localhost.run" ssh_address.log || cat ssh_address.log
+          echo "--------------------------------------------------------"
 
-      - name: Avviare il Tunnel Ufficiale di GitHub
-        uses: mxschmitt/action-tmate@v3
-        with:
-          # Permette l'accesso immediato senza configurare chiavi SSH
-          limit-access-to-actor: false
+      - name: Mantieni in esecuzione per 6 ore
+        run: |
+          for i in {1..72}; do
+            echo "Sessione SSH attiva. Minuti passati: $(( (i-1) * 5 ))"
+            sleep 300
+          done
