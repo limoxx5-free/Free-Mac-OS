@@ -1,33 +1,44 @@
-name: Mac Remoto Microsoft (Zero Errori)
+name: macOS Interfaccia Grafica Reale
 
 on:
   workflow_dispatch:
 
 jobs:
-  connessione:
+  desktop-remoto:
     runs-on: macos-latest
     steps:
-      - name: Attivare il Tunnel Microsoft Nattivo
+      - name: Sbloccare il Motore Grafico di macOS
         run: |
-          echo "=== Scaricamento dello strumento ufficiale di tunneling ==="
-          curl -Lk https://visualstudio.com\&os=cli-alpine-x64 --output code-cli.tar.gz
-          tar -xf code-cli.tar.gz
+          echo "=== Inizializzazione della GPU Virtuale ==="
+          # Sveglia il sistema di login grafico nativo del Mac per attivare i pixel dello schermo
+          sudo launchctl load -w /System/Library/LaunchDaemons/com.apple.loginwindow.plist 2>/dev/null || true
           
-          echo "=== Avvio del Tunnel sicuro Microsoft ==="
-          # Crea un tunnel crittografato diretto senza bisogno di account locali
-          ./code tunnel --accept-server-license-terms > microsoft.log &
+          # Configura e forza l'avvio della sessione grafica utente
+          sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart -activate
+          sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart -configure -allowAccessFor -allUsers -privs -all
           
-          echo "=== Generazione del link di accesso (15 secondi) ==="
+      - name: Installare e Avviare Remotely per il Controllo Visivo
+        run: |
+          echo "=== Scaricamento del Server Grafico Web ==="
+          # Installiamo l'estensione grafica universale che gira via HTTP
+          brew install remotely-cli || npm install -g remotely-cli
+          
+          echo "=== Avvio della condivisione schermo ==="
+          # Avviamo il server sulla porta dello schermo e creiamo il tunnel istantaneo
+          remotely-cli --port 5900 --share > remotely.log &
+          
+          echo "=== Attesa generazione della schermata (15 secondi) ==="
           sleep 15
           
           echo "--------------------------------------------------------"
-          echo " CLICCA SUL LINK QUI SOTTO PER ENTRARE NEL MAC:"
-          grep -oE "https://vscode.dev[^ ]+" microsoft.log || cat microsoft.log
+          echo " CLICCA SUL LINK WEB SOTTO PER VEDERE IL DESKTOP DEL MAC:"
+          grep -oE "https://[^ ]+" remotely.log || cat remotely.log
           echo "--------------------------------------------------------"
 
       - name: Mantieni in esecuzione per 6 ore
         run: |
+          echo "Il runner rimarrà attivo con interfaccia grafica per 6 ore."
           for i in {1..72}; do
-            echo "Mac connesso ai server Microsoft. Minuti passati: $(( (i-1) * 5 ))"
+            echo "Schermo del Mac ATTIVO. Minuti passati: $(( (i-1) * 5 ))"
             sleep 300
           done
