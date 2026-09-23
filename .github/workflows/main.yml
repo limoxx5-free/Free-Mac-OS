@@ -1,4 +1,4 @@
-name: macOS Interfaccia Grafica Reale (No Schermo Bianco)
+name: macOS Interfaccia Grafica Reale (Browser)
 
 on:
   workflow_dispatch:
@@ -7,45 +7,36 @@ jobs:
   desktop-remoto:
     runs-on: macos-latest
     steps:
-      - name: Sbloccare Forzatamente il Motore Grafico del Mac
+      - name: Sbloccare lo Schermo Grafico del Mac
         run: |
-          echo "=== Sveglia del Sottosistema Video di Apple ==="
-          # Comandi per impedire al Mac virtuale di andare in standby o mostrare schermate vuote
-          sudo defaults write /Library/Preferences/com.apple.windowserver.plist DisplayResolutionEnabled -bool true
+          echo "=== Attivazione Sottosistema Grafico Apple ==="
           sudo launchctl load -w /System/Library/LaunchDaemons/com.apple.loginwindow.plist 2>/dev/null || true
           
-          # Attiviamo il server dello schermo nativo di Apple con tutti i permessi amministrativi
+          # Attiviamo lo schermo integrato di Apple per assicurarci che risponda sulla porta 5900
           sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart -activate -configure -allowAccessFor -allUsers -privs -all
-          sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart -configure -clientopts -setvnclegacy yes -setvncpw PasswordSicura123
-          sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart -restart -agent
-          echo "=== Schermo Apple Pronto e Sveglio ==="
-
-      - name: Installare ed Configurare Ngrok
-        run: |
-          echo "=== Installazione di Ngrok ==="
-          brew install --cask ngrok
           
-          echo "=== Autenticazione con il tuo Token ==="
-          ngrok config add-authtoken "3EoMAQM9GPofB8ve0Ur2rgD5K8t_2tqfrr56vyM8QNhUNiELX"
+          echo "=== Installazione Interfaccia Grafica Web ==="
+          pip install websockify
 
-      - name: Avviare il Tunnel Grafico
+      - name: Avviare il Server e il Tunnel Pubblico Gratuito
         run: |
-          echo "=== Apertura del Tunnel sulla porta video (5900) ==="
-          # Lanciamo il tunnel TCP diretto sulla porta 5900 del Mac
-          ngrok tcp 5900 --log=stdout > ngrok.log &
-          sleep 12
+          echo "=== Avvio del Server Interfaccia Web sulla porta 8080 ==="
+          websockify 8080 localhost:5900 &
+          sleep 5
           
+          echo "=== Apertura del Tunnel con Pinggy (No Carte, No Account) ==="
+          # Creiamo un tunnel HTTP standard che aggira i blocchi delle carte di credito delle altre piattaforme
+          ssh -p 443 -R0:localhost:8080 -o StrictHostKeyChecking=no -o ServerAliveInterval=30 b@the.pinggy.io > pinggy.log &
+          sleep 15
+          
+          --------------------------------------------------------
+          echo " CLICCA SUL LINK WEB QUI SOTTO PER APRIRE IL MAC:"
+          grep -oE "https://[^ ]+" pinggy.log || cat pinggy.log
           echo "--------------------------------------------------------"
-          echo " ECCO LE TUE CHIAVI DELLA FERRARI. CONNETTITI QUI:"
-          # Estrae l'indirizzo reale per il tuo client VNC
-          curl -s http://127.0.0 | jq -r '.tunnels.public_url'
-          echo " Password dello Schermo: PasswordSicura123"
-          echo "--------------------------------------------------------"
-          echo "NOTA: Rimuovi 'tcp://' dall'indirizzo quando lo incolli nel programma."
 
       - name: Mantieni in esecuzione per 6 ore
         run: |
           for i in {1..72}; do
-            echo "Schermo del Mac ATTIVO. Minuti passati: $(( (i-1) * 5 ))"
+            echo "Schermo del Mac ATTIVO sul browser. Minuti passati: $(( (i-1) * 5 ))"
             sleep 300
           done
