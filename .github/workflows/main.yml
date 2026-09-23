@@ -7,12 +7,10 @@ jobs:
   desktop-remoto:
     runs-on: macos-latest
     steps:
-      - name: Installare Ngrok e Server Video
+      - name: Installare Strumenti
         run: |
-          echo "=== Installazione strumenti di rete ==="
-          brew install --cask ngrok
-          # Installiamo tigervnc via brew ma estraiamo i binari con il percorso corretto
-          brew install tigervnc
+          echo "=== Installazione di Ngrok e TigerVNC App ==="
+          brew install --cask ngrok tigervnc
 
       - name: Attivare Sottosistema Grafico Apple
         run: |
@@ -25,26 +23,19 @@ jobs:
           echo "=== Autenticazione Ngrok ==="
           ngrok config add-authtoken "3EoMAQM9GPofB8ve0Ur2rgD5K8t_2tqfrr56vyM8QNhUNiELX"
           
-          echo "=== Avvio Server Grafico ==="
-          # Troviamo il percorso assoluto di TigerVNC installato da brew per evitare il command not found
-          export PATH="/opt/homebrew/opt/tigervnc/bin:$PATH"
-          mkdir -p ~/.vnc
-          echo "PasswordSicura123" | vncpasswd -f > ~/.vnc/passwd
-          chmod 600 ~/.vnc/passwd
-          
-          # Avviamo il server grafico sulla porta standard
-          vncserver :1 -geometry 1280x720 -localhost no -rfbauth ~/.vnc/passwd &
+          echo "=== Avvio dell'applicazione Grafica ==="
+          # Avviamo direttamente l'eseguibile dentro l'app installata da brew in background
+          /Applications/TigerVNC.app/Contents/MacOS/TigerVNC -vnc &
           sleep 5
           
           echo "=== Apertura del Tunnel Pubblico Grafico ==="
-          # Colleghiamo Ngrok direttamente alla porta video del server appena creato (porta 5901)
-          ngrok tcp 5901 --log=stdout > ngrok.log &
+          # Apriamo il tunnel sulla porta standard della condivisione schermo (5900)
+          ngrok tcp 5900 --log=stdout > ngrok.log &
           sleep 12
           
           echo "--------------------------------------------------------"
           echo " INDIRIZZO PER CONNETTERTI AL DESKTOP DEL MAC:"
           curl -s http://127.0.0 | jq -r '.tunnels.public_url'
-          echo " Password dello Schermo: PasswordSicura123"
           echo "--------------------------------------------------------"
           echo "Nota: Copia l'indirizzo tcp:// generato e incollalo nel tuo client VNC locale."
 
