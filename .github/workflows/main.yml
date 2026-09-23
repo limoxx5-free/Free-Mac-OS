@@ -7,25 +7,15 @@ jobs:
   connessione:
     runs-on: macos-latest
     steps:
-      - name: Attivare il Tunnel Microsoft Preinstallato
-        run: |
-          echo "=== Avvio del Tunnel sicuro Microsoft integrato ==="
-          
-          # Utilizziamo la CLI di VS Code già presente nativamente nel sistema operativo
-          code tunnel --accept-server-license-terms > microsoft.log &
-          
-          echo "=== Generazione del link di accesso (15 secondi) ==="
-          sleep 15
-          
-          echo "--------------------------------------------------------"
-          echo " CLICCA SUL LINK QUI SOTTO PER ENTRARE NEL MAC:"
-          # Estrae il link ufficiale generato direttamente dal sistema
-          grep -oE "https://vscode.dev[^ ]+" microsoft.log || cat microsoft.log
-          echo "--------------------------------------------------------"
+      - name: Avvia il Tunnel Ufficiale Microsoft VS Code
+        uses: sersoft-gmbh/vscode-tunnel-action@v2
+        with:
+          # Questo avvia il tunnel nativo in modo sicuro e stabile
+          provider: 'github'
 
       - name: Mantieni in esecuzione per 6 ore
         run: |
           for i in {1..72}; do
-            echo "Mac connesso ai server Microsoft Azure. Minuti passati: $(( (i-1) * 5 ))"
+            echo "Mac connesso in modalità grafica. Minuti passati: $(( (i-1) * 5 ))"
             sleep 300
           done
