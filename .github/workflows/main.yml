@@ -7,22 +7,19 @@ jobs:
   connessione:
     runs-on: macos-latest
     steps:
-      - name: Attivare il Sottosistema Microsoft Web
+      - name: Attivare il Tunnel Microsoft Preinstallato
         run: |
-          echo "=== Scaricamento dello strumento ufficiale di tunneling ==="
-          # Scarichiamo la CLI ufficiale stabile di VS Code per Mac
-          curl -Lk "https://visualstudio.com" --output code-cli.tar.gz
-          tar -xf code-cli.tar.gz
+          echo "=== Avvio del Tunnel sicuro Microsoft integrato ==="
           
-          echo "=== Avvio del Tunnel sicuro Microsoft ==="
-          # Avviamo il tunnel accettando i termini e salvando il link nei log
-          ./code tunnel --accept-server-license-terms > microsoft.log &
+          # Utilizziamo la CLI di VS Code già presente nativamente nel sistema operativo
+          code tunnel --accept-server-license-terms > microsoft.log &
           
           echo "=== Generazione del link di accesso (15 secondi) ==="
           sleep 15
           
           echo "--------------------------------------------------------"
           echo " CLICCA SUL LINK QUI SOTTO PER ENTRARE NEL MAC:"
+          # Estrae il link ufficiale generato direttamente dal sistema
           grep -oE "https://vscode.dev[^ ]+" microsoft.log || cat microsoft.log
           echo "--------------------------------------------------------"
 
