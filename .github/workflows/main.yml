@@ -1,4 +1,4 @@
-name: macOS Interfaccia Grafica Reale
+name: macOS Interfaccia Grafica Reale (No Schermo Bianco)
 
 on:
   workflow_dispatch:
@@ -7,37 +7,45 @@ jobs:
   desktop-remoto:
     runs-on: macos-latest
     steps:
-      - name: Attivare Schermo Nativo del Mac
+      - name: Sbloccare Forzatamente il Motore Grafico del Mac
         run: |
-          echo "=== Configurazione Schermo Apple ==="
-          # Comandi singoli e puliti accettati dal sistema operativo
-          sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart -activate
-          sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart -configure -allowAccessFor -allUsers -privs -all
+          echo "=== Sveglia del Sottosistema Video di Apple ==="
+          # Comandi per impedire al Mac virtuale di andare in standby o mostrare schermate vuote
+          sudo defaults write /Library/Preferences/com.apple.windowserver.plist DisplayResolutionEnabled -bool true
+          sudo launchctl load -w /System/Library/LaunchDaemons/com.apple.loginwindow.plist 2>/dev/null || true
+          
+          # Attiviamo il server dello schermo nativo di Apple con tutti i permessi amministrativi
+          sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart -activate -configure -allowAccessFor -allUsers -privs -all
           sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart -configure -clientopts -setvnclegacy yes -setvncpw PasswordSicura123
           sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart -restart -agent
-          echo "=== Schermo Apple Attivato ==="
+          echo "=== Schermo Apple Pronto e Sveglio ==="
 
-      - name: Installare ed Avviare Tunnel Cloudflare
+      - name: Installare ed Configurare Ngrok
         run: |
-          echo "=== Installazione Cloudflared ==="
-          brew install cloudflared
+          echo "=== Installazione di Ngrok ==="
+          brew install --cask ngrok
           
-          echo "=== Avvio del Tunnel Grafico in Background ==="
-          # Crea un tunnel TCP sulla porta dello schermo (5900) senza account o registrazioni
-          cloudflared tunnel --url tcp://localhost:5900 > cloudflare.log 2>&1 &
-          
-          echo "=== Attesa generazione indirizzo (15 secondi) ==="
-          sleep 15
+          echo "=== Autenticazione con il tuo Token ==="
+          ngrok config add-authtoken "3EoMAQM9GPofB8ve0Ur2rgD5K8t_2tqfrr56vyM8QNhUNiELX"
+
+      - name: Avviare il Tunnel Grafico
+        run: |
+          echo "=== Apertura del Tunnel sulla porta video (5900) ==="
+          # Lanciamo il tunnel TCP diretto sulla porta 5900 del Mac
+          ngrok tcp 5900 --log=stdout > ngrok.log &
+          sleep 12
           
           echo "--------------------------------------------------------"
-          echo " INDIRIZZO PER CONNETTERTI AL DESKTOP DEL MAC:"
-          grep -oE "[a-zA-Z0-9.-]+\.trycloudflare\.com:[0-9]+" cloudflare.log || cat cloudflare.log
+          echo " ECCO LE TUE CHIAVI DELLA FERRARI. CONNETTITI QUI:"
+          # Estrae l'indirizzo reale per il tuo client VNC
+          curl -s http://127.0.0 | jq -r '.tunnels.public_url'
           echo " Password dello Schermo: PasswordSicura123"
           echo "--------------------------------------------------------"
+          echo "NOTA: Rimuovi 'tcp://' dall'indirizzo quando lo incolli nel programma."
 
       - name: Mantieni in esecuzione per 6 ore
         run: |
           for i in {1..72}; do
-            echo "Connessione grafica stabile. Minuti passati: $(( (i-1) * 5 ))"
+            echo "Schermo del Mac ATTIVO. Minuti passati: $(( (i-1) * 5 ))"
             sleep 300
           done
