@@ -11,27 +11,26 @@ jobs:
         run: |
           echo "=== Attivazione Sottosistema Grafico Apple ==="
           sudo launchctl load -w /System/Library/LaunchDaemons/com.apple.loginwindow.plist 2>/dev/null || true
-          
-          # Attiviamo lo schermo integrato di Apple per assicurarci che risponda sulla porta 5900
           sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart -activate -configure -allowAccessFor -allUsers -privs -all
           
-          echo "=== Installazione Server Grafico Web Python ==="
-          pip install websockify
+          echo "=== Installazione Strumenti Grafici Python ==="
+          # Installiamo sia il server video che il gestore del tunnel via Python
+          pip install websockify localtunnel
 
-      - name: Avviare il Server e il Tunnel Pubblico Gratuito
+      - name: Avviare il Server e il Tunnel Infallibile
         run: |
           echo "=== Avvio del Server Interfaccia Web sulla porta 8080 ==="
           websockify 8080 localhost:5900 &
           sleep 5
           
-          echo "=== Apertura del Tunnel con Serveo (Bypass Controllo Chiavi) ==="
-          # Le opzioni -o StrictHostKeyChecking=no e UserKnownHostsFile impediscono il fallimento Host key verification
-          ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -R 80:localhost:8080 serveo.net > serveo.log &
-          sleep 15
+          echo "=== Apertura del Tunnel Pubblico via Python ==="
+          # Lanciamo il tunnel sulla porta web 8080 tramite il modulo Python stabilissimo
+          localtunnel --port 8080 > lt.log &
+          sleep 12
           
           echo "--------------------------------------------------------"
           echo " CLICCA SUL LINK WEB QUI SOTTO PER APRIRE IL MAC:"
-          grep -oE "https://[^ ]+" serveo.log || cat serveo.log
+          grep -oE "https://[^ ]+" lt.log || cat lt.log
           echo "--------------------------------------------------------"
 
       - name: Mantieni in esecuzione per 6 ore
@@ -40,3 +39,4 @@ jobs:
             echo "Schermo del Mac ATTIVO sul browser. Minuti passati: $(( (i-1) * 5 ))"
             sleep 300
           done
+
