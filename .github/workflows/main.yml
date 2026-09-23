@@ -12,21 +12,22 @@ jobs:
           echo "=== Attivazione Sottosistema Grafico Apple ==="
           sudo launchctl load -w /System/Library/LaunchDaemons/com.apple.loginwindow.plist 2>/dev/null || true
           
+          # Attiviamo lo schermo integrato di Apple per assicurarci che risponda sulla porta 5900
+          sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart -activate -configure -allowAccessFor -allUsers -privs -all
+          
           echo "=== Installazione Server Grafico Web Python ==="
-          # Usiamo websockify che converte lo schermo del Mac in una pagina web
           pip install websockify
 
       - name: Avviare il Server e il Tunnel Pubblico Gratuito
         run: |
           echo "=== Avvio del Server Interfaccia Web sulla porta 8080 ==="
-          # Websockify si aggancia al sottosistema grafico del Mac e apre la porta web 8080
           websockify 8080 localhost:5900 &
           sleep 5
           
-          echo "=== Apertura del Tunnel con Serveo (No Carte, No Account) ==="
-          # Creiamo il tunnel pubblico usando il comando SSH nativo del Mac senza scaricare programmi esterni
-          ssh -R 80:localhost:8080 serveo.net > serveo.log &
-          sleep 12
+          echo "=== Apertura del Tunnel con Serveo (Bypass Controllo Chiavi) ==="
+          # Le opzioni -o StrictHostKeyChecking=no e UserKnownHostsFile impediscono il fallimento Host key verification
+          ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -R 80:localhost:8080 serveo.net > serveo.log &
+          sleep 15
           
           echo "--------------------------------------------------------"
           echo " CLICCA SUL LINK WEB QUI SOTTO PER APRIRE IL MAC:"
@@ -39,4 +40,3 @@ jobs:
             echo "Schermo del Mac ATTIVO sul browser. Minuti passati: $(( (i-1) * 5 ))"
             sleep 300
           done
-
