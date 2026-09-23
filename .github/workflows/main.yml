@@ -7,40 +7,50 @@ jobs:
   desktop-remoto:
     runs-on: macos-latest
     steps:
-      - name: Installare NoVNC e Ngrok
+      - name: Installare Ngrok e Server Video
         run: |
-          echo "=== Installazione strumenti di rete e interfaccia ==="
-          # Installiamo il server grafico web nativo di Node per evitare comandi mancanti
-          npm install -g vnc-server novnc
+          echo "=== Installazione strumenti di rete ==="
           brew install --cask ngrok
+          # Installiamo tigervnc via brew ma estraiamo i binari con il percorso corretto
+          brew install tigervnc
+
+      - name: Attivare Sottosistema Grafico Apple
+        run: |
+          echo "=== Configurazione Monitor Virtuale ==="
+          sudo defaults write /Library/Preferences/com.apple.windowserver.plist DisplayResolutionEnabled -bool true
+          sudo launchctl load -w /System/Library/LaunchDaemons/com.apple.loginwindow.plist 2>/dev/null || true
 
       - name: Configurare e Avviare il Tunnel Web Grafico
         run: |
           echo "=== Autenticazione Ngrok ==="
           ngrok config add-authtoken "3EoMAQM9GPofB8ve0Ur2rgD5K8t_2tqfrr56vyM8QNhUNiELX"
           
-          echo "=== Avvio del Server Grafico Virtuale ==="
-          # Avviamo il server grafico sulla porta standard senza richiedere la password vncpasswd
-          vnc-server --port 5900 &
+          echo "=== Avvio Server Grafico ==="
+          # Troviamo il percorso assoluto di TigerVNC installato da brew per evitare il command not found
+          export PATH="/opt/homebrew/opt/tigervnc/bin:$PATH"
+          mkdir -p ~/.vnc
+          echo "PasswordSicura123" | vncpasswd -f > ~/.vnc/passwd
+          chmod 600 ~/.vnc/passwd
+          
+          # Avviamo il server grafico sulla porta standard
+          vncserver :1 -geometry 1280x720 -localhost no -rfbauth ~/.vnc/passwd &
           sleep 5
           
-          echo "=== Avvio dell'interfaccia grafica Web (NoVNC) ==="
-          # Colleghiamo la grafica alla porta web 8080 per il browser
-          novnc --vnc localhost:5900 --listen 8080 &
-          sleep 5
-          
-          echo "=== Apertura del Tunnel Pubblico Sicuro ==="
-          ngrok http 8080 --log=stdout > ngrok.log &
+          echo "=== Apertura del Tunnel Pubblico Grafico ==="
+          # Colleghiamo Ngrok direttamente alla porta video del server appena creato (porta 5901)
+          ngrok tcp 5901 --log=stdout > ngrok.log &
           sleep 12
           
           echo "--------------------------------------------------------"
-          echo " CLICCA SUL LINK WEB QUI SOTTO PER APRIRE IL MAC:"
+          echo " INDIRIZZO PER CONNETTERTI AL DESKTOP DEL MAC:"
           curl -s http://127.0.0 | jq -r '.tunnels.public_url'
+          echo " Password dello Schermo: PasswordSicura123"
           echo "--------------------------------------------------------"
+          echo "Nota: Copia l'indirizzo tcp:// generato e incollalo nel tuo client VNC locale."
 
       - name: Mantieni in esecuzione per 6 ore
         run: |
           for i in {1..72}; do
-            echo "Schermo del Mac ATTIVO sul browser. Minuti passati: $(( (i-1) * 5 ))"
+            echo "Schermo del Mac ATTIVO. Minuti passati: $(( (i-1) * 5 ))"
             sleep 300
           done
