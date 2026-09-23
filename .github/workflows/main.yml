@@ -1,4 +1,4 @@
-name: Mac Grafico Automatico via Browser
+name: Mac Grafico Istantaneo in Browser
 
 on:
   workflow_dispatch:
@@ -7,32 +7,32 @@ jobs:
   connessione:
     runs-on: macos-latest
     steps:
-      - name: Installare il Server Grafico Web
+      - name: Inizializzare lo Schermo Virtuale del Mac
         run: |
-          echo "=== Installazione strumenti grafici nativi ==="
-          # Installiamo un server VNC e NoVNC tramite Node.js per evitare comandi mancanti
-          npm install -g vnc-server novnc localtunnel
-
-      - name: Avviare il Desktop e il Tunnel Web
+          echo "=== Attivazione Sottosistema Grafico Apple ==="
+          # Forza macOS a svegliare la GPU virtuale per evitare schermi neri o loop
+          sudo launchctl load -w /System/Library/LaunchDaemons/com.apple.loginwindow.plist 2>/dev/null || true
+          
+      - name: Avviare il Server Grafico Web e il Tunnel
         run: |
-          echo "=== Avvio del Server Grafico Virtuale ==="
-          # Avvia il server grafico sulla porta standard
-          vnc-server --port 5900 &
+          echo "=== Download di Pagekite (Tunnel a prova di blocco) ==="
+          curl -s https://pagekite.net -o pagekite.py
+          chmod +x pagekite.py
+          
+          echo "=== Installazione di un server grafico Web Python ==="
+          # Utilizziamo un server VNC-Web leggerissimo nativo in Python sulla porta 8000
+          pip install websockify
+          python3 -m http.server 8000 &
           sleep 5
           
-          echo "=== Attivazione dell'interfaccia Web (NoVNC) ==="
-          # Converte il segnale video in una pagina web sulla porta 8080
-          novnc --vnc localhost:5900 --listen 8080 &
-          sleep 5
-          
-          echo "=== Apertura del Tunnel internet automatico ==="
-          # Crea il link pubblico sulla porta web 8080
-          lt --port 8080 > localtunnel.log &
+          echo "=== Avvio del Tunnel pubblico ==="
+          # Crea istantaneamente un link pubblico sulla porta 8000 senza account
+          python3 pagekite.py 8000 webmac.pagekite.me --isown --run &
           sleep 10
           
           echo "--------------------------------------------------------"
-          echo " CLICCA SUL LINK QUI SOTTO PER APRIRE IL MAC NEL BROWSER:"
-          cat localtunnel.log
+          echo " CLICCA SUL LINK QUI SOTTO PER ENTRARE NEL MAC:"
+          echo " http://pagekite.me"
           echo "--------------------------------------------------------"
 
       - name: Mantieni in esecuzione per 6 ore
