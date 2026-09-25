@@ -1,4 +1,4 @@
-name: macOS Interfaccia Grafica Reale (Browser)
+name: macOS Desktop Remoto con AnyDesk
 
 on:
   workflow_dispatch:
@@ -6,37 +6,194 @@ on:
 jobs:
   desktop-remoto:
     runs-on: macos-latest
+    timeout-minutes: 360
+
     steps:
-      - name: Sbloccare lo Schermo Grafico del Mac
+      - name: Attivare l'Interfaccia Grafica del Mac
         run: |
           echo "=== Attivazione Sottosistema Grafico Apple ==="
           sudo launchctl load -w /System/Library/LaunchDaemons/com.apple.loginwindow.plist 2>/dev/null || true
-          
-          # Attiviamo lo schermo integrato di Apple per assicurarci che risponda sulla porta 5900
-          sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart -activate -configure -allowAccessFor -allUsers -privs -all
-          
-          echo "=== Installazione Interfaccia Grafica Web ==="
-          pip install websockify
 
-      - name: Avviare il Server e il Tunnel Pubblico Gratuito
+          # Attiva lo screen sharing e ARD per assicurare che il display risponda
+          sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart \
+            -activate -configure -allowAccessFor -allUsers -privs -all
+
+          # Imposta una risoluzione virtuale per avere un display visibile
+          sudo systemsetup -setrestartfreeze on 2>/dev/null || true
+
+      - name: Scaricare e Installare AnyDesk
         run: |
-          echo "=== Avvio del Server Interfaccia Web sulla porta 8080 ==="
-          websockify 8080 localhost:5900 &
-          sleep 5
-          
-          echo "=== Apertura del Tunnel con Pinggy (No Carte, No Account) ==="
-          # Creiamo un tunnel HTTP standard che aggira i blocchi delle carte di credito delle altre piattaforme
-          ssh -p 443 -R0:localhost:8080 -o StrictHostKeyChecking=no -o ServerAliveInterval=30 b@the.pinggy.io > pinggy.log &
+          echo "=== Download AnyDesk per macOS ==="
+          curl -L -o anydesk.dmg "https://download.anydesk.com/anydesk.dmg"
+          ls -lh anydesk.dmg
+
+          echo "=== Montaggio del DMG ==="
+          hdiutil attach anydesk.dmg -nobrowse
+
+          echo "=== Copia di AnyDesk in /Applications ==="
+          # Prova vari nomi di volume possibili
+          if [ -d "/Volumes/AnyDesk" ]; then
+            cp -R "/Volumes/AnyDesk/AnyDesk.app" /Applications/
+            hdiutil detach "/Volumes/AnyDesk"
+          elif ls -d /Volumes/AnyDesk* >/dev/null 2>&1; then
+            VOL=$(ls -d /Volumes/AnyDesk* | head -1)
+            cp -R "$VOL/AnyDesk.app" /Applications/
+            hdiutil detach "$VOL"
+          else
+            echo "ERRORE: Impossibile trovare il volume AnyDesk"
+            ls /Volumes/
+            exit 1
+          fi
+
+          echo "=== Rimozione attributi di quarantena ==="
+          sudo xattr -cr /Applications/AnyDesk.app
+
+          echo "=== Verifica installazione ==="
+          ls -la /Applications/AnyDesk.app/Contents/MacOS/AnyDesk
+
+      - name: Concedere Permessi di Screen Recording ad AnyDesk
+        run: |
+          echo "=== Configurazione permessi TCC per Screen Recording ==="
+          # Su runner macOS di GitHub Actions, SIP potrebbe essere disabilitato
+          # Tentiamo di concedere i permessi via database TCC
+
+          ANYDESK_BUNDLE="com.phoenix.anydesk"
+          ANYDESK_PATH="/Applications/AnyDesk.app"
+
+          # Database TCC di sistema
+          TCC_DB="/Library/Application Support/com.apple.TCC/TCC.db"
+
+          # Prova a inserire i permessi per Screen Recording
+          sudo sqlite3 "$TCC_DB" \
+            "INSERT OR REPLACE INTO access (service, client, client_type, auth_value, auth_reason, auth_version, indirect_object_identifier_type, indirect_object_identifier, flags, last_modified) VALUES ('kTCCServiceScreenCapture', '$ANYDESK_BUNDLE', 0, 2, 0, 1, 'bundleID', '$ANYDESK_BUNDLE', 0, strftime('%s','now'));" \
+            2>/dev/null && echo "Permessi Screen Recording concessi" || echo "Impossibile modificare TCC (SIP attivo?) - continuo comunque"
+
+          # Permessi di Accessibilità
+          sudo sqlite3 "$TCC_DB" \
+            "INSERT OR REPLACE INTO access (service, client, client_type, auth_value, auth_reason, auth_version, indirect_object_identifier_type, indirect_object_identifier, flags, last_modified) VALUES ('kTCCServiceAccessibility', '$ANYDESK_BUNDLE', 0, 2, 0, 1, 'bundleID', '$ANYDESK_BUNDLE', 0, strftime('%s','now'));" \
+            2>/dev/null && echo "Permessi Accessibilità concessi" || echo "Impossibile modificare TCC per Accessibilità"
+
+      - name: Avviare AnyDesk e Recuperare l'ID
+        env:
+          ANYDESK_PASSWORD: ${{ secrets.ANYDESK_PASSWORD }}
+        run: |
+          ANYDESK="/Applications/AnyDesk.app/Contents/MacOS/AnyDesk"
+
+          # Password predefinita se non impostata nei secrets di GitHub
+          if [ -z "$ANYDESK_PASSWORD" ]; then
+            ANYDESK_PASSWORD="MacRemote2024"
+          fi
+          echo "Password in uso: $ANYDESK_PASSWORD"
+
+          echo "=== Primo avvio di AnyDesk ==="
+          # Apri AnyDesk come applicazione GUI
+          open -a AnyDesk
+          sleep 20
+
+          # Verifica che il processo sia attivo
+          if pgrep -f "AnyDesk" > /dev/null; then
+            echo "Processo AnyDesk avviato con successo"
+          else
+            echo "AnyDesk non partito con 'open', tentativo con esecuzione diretta..."
+            $ANYDESK &
+            sleep 15
+          fi
+
+          echo "=== Recupero ID AnyDesk ==="
+          ANYDESK_ID=""
+          for i in $(seq 1 12); do
+            ANYDESK_ID=$($ANYDESK --get-id 2>/dev/null | tr -d '[:space:]')
+            if [ -n "$ANYDESK_ID" ] && [ "$ANYDESK_ID" != "0" ]; then
+              echo "ID ottenuto al tentativo $i"
+              break
+            fi
+            echo "In attesa dell'ID... tentativo $i/12"
+            sleep 10
+          done
+
+          if [ -z "$ANYDESK_ID" ] || [ "$ANYDESK_ID" = "0" ]; then
+            echo "ATTENZIONE: Impossibile recuperare l'ID AnyDesk automaticamente."
+            echo "L'ID potrebbe essere visibile nell'interfaccia GUI di AnyDesk."
+            ANYDESK_ID="NON_DISPONIBILE"
+          fi
+
+          echo "=== Tentativo di impostazione password via CLI ==="
+          $ANYDESK --set-password "$ANYDESK_PASSWORD" 2>/dev/null && echo "Password impostata via CLI" || echo "set-password non supportato, tentativo via file di config"
+
+          # Fallback: imposta la password tramite file di configurazione
+          if [ ! -d "$HOME/.anydesk" ]; then
+            mkdir -p "$HOME/.anydesk"
+          fi
+
+          # Scrive la configurazione per l'accesso non presidiato
+          cat > "$HOME/.anydesk/system.conf" << EOFCONF
+ad.security.password=${ANYDESK_PASSWORD}
+ad.security.enable_unattended_access=true
+ad.features.session_recording=false
+ad.gui.autostart=true
+ad.app.auto_start_anydesk=true
+ad.security.interaction_access=1
+ad.security.accept_dialog_auto_accept=true
+EOFCONF
+          echo "File di configurazione scritto in $HOME/.anydesk/system.conf"
+
+          # Riavvia AnyDesk per applicare la configurazione
+          pkill -f "AnyDesk" 2>/dev/null || true
+          sleep 3
+          open -a AnyDesk
           sleep 15
-          
-          --------------------------------------------------------
-          echo " CLICCA SUL LINK WEB QUI SOTTO PER APRIRE IL MAC:"
-          grep -oE "https://[^ ]+" pinggy.log || cat pinggy.log
-          echo "--------------------------------------------------------"
 
-      - name: Mantieni in esecuzione per 6 ore
+          # Riprova a recuperare l'ID dopo il riavvio
+          if [ "$ANYDESK_ID" = "NON_DISPONIBILE" ]; then
+            for i in $(seq 1 6); do
+              ANYDESK_ID=$($ANYDESK --get-id 2>/dev/null | tr -d '[:space:]')
+              if [ -n "$ANYDESK_ID" ] && [ "$ANYDESK_ID" != "0" ]; then
+                break
+              fi
+              sleep 10
+            done
+          fi
+
+          echo ""
+          echo "========================================"
+          echo "  DESKTOP REMOTO macOS - PRONTO!"
+          echo "========================================"
+          echo "  AnyDesk ID : $ANYDESK_ID"
+          echo "  Password   : $ANYDESK_PASSWORD"
+          echo "========================================"
+          echo ""
+          echo "  Per connetterti:"
+          echo "  1. Scarica AnyDesk da https://anydesk.com/it/downloads"
+          echo "  2. Inserisci l'ID qui sopra nella barra di AnyDesk"
+          echo "  3. Inserisci la password quando richiesta"
+          echo "========================================"
+
+          # Salva i dati in variabili d'ambiente per i passi successivi
+          echo "$ANYDESK_ID" > /tmp/anydesk_id.txt
+          echo "$ANYDESK_PASSWORD" > /tmp/anydesk_password.txt
+
+      - name: Mantieni AnyDesk in esecuzione per 6 ore
         run: |
-          for i in {1..72}; do
-            echo "Schermo del Mac ATTIVO sul browser. Minuti passati: $(( (i-1) * 5 ))"
+          ANYDESK="/Applications/AnyDesk.app/Contents/MacOS/AnyDesk"
+
+          for i in $(seq 1 72); do
+            # Controlla se AnyDesk è ancora attivo, altrimenti riavvia
+            if ! pgrep -f "AnyDesk" > /dev/null; then
+              echo "[$(date)] AnyDesk non in esecuzione - riavvio in corso..."
+              open -a AnyDesk
+              sleep 10
+            fi
+
+            # Stampa l'ID ogni 15 minuti per riferimento
+            if [ $(( i % 3 )) -eq 0 ]; then
+              ID=$($ANYDESK --get-id 2>/dev/null | tr -d '[:space:]')
+              echo "[$(date)] AnyDesk ATTIVO - ID: ${ID:-?} - Minuti passati: $(( (i-1) * 5 ))"
+            else
+              echo "[$(date)] AnyDesk ATTIVO - Minuti passati: $(( (i-1) * 5 ))"
+            fi
+
             sleep 300
           done
+
+          echo "=== Tempo scaduto - chiusura AnyDesk ==="
+          pkill -f "AnyDesk" 2>/dev/null || true
